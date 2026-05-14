@@ -35,16 +35,16 @@ def seed_demo():
         click.echo('SEED_DEMO != 1 — saltando carga de datos de demo.')
         return
     from app.models import Machine
-    # 1. Generar ~400 máquinas (reutilizamos la lógica de seed-machines --clear)
+
     click.echo('Paso 1/2 — Generando flota de máquinas...')
     n = Machine.query.delete()
     db.session.commit()
     if n:
         click.echo(f'  {n} máquinas anteriores eliminadas.')
-    from click.testing import CliRunner
-    runner = CliRunner()
-    runner.invoke(seed_machines, catch_exceptions=False)
-    # 2. Cargar clientes, albaranes y partes de reparación encima
+
+    # Llamada directa (sin CliRunner) al populador de máquinas
+    _populate_machines()
+
     click.echo('Paso 2/2 — Cargando clientes, albaranes y reparaciones...')
     import seed as seed_module
     seed_module.seed()
@@ -103,6 +103,13 @@ def seed_machines(clear):
         n = Machine.query.delete()
         db.session.commit()
         click.echo(f'  {n} máquinas eliminadas.')
+
+    _populate_machines()
+
+
+def _populate_machines():
+    """Lógica de poblado de máquinas extraída para ser reutilizable desde otros comandos."""
+    from app.models import Machine
 
     existing = {m.code for m in Machine.query.with_entities(Machine.code).all()}
 
