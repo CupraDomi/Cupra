@@ -1,7 +1,30 @@
+import os
 import click
 from app import create_app, db
 
 app = create_app()
+
+
+@app.cli.command('seed-admin-env')
+def seed_admin_env():
+    """Crea el admin leyendo ADMIN_USERNAME / ADMIN_PASSWORD / ADMIN_FULLNAME.
+    Si ya existe algún usuario, no hace nada (seguro para redeploys)."""
+    from app.auth.models import User
+    password = os.environ.get('ADMIN_PASSWORD')
+    if not password:
+        click.echo('ADMIN_PASSWORD no definida — saltando creación de admin.')
+        return
+    if User.query.first():
+        click.echo('Ya existen usuarios — saltando seed.')
+        return
+    username  = os.environ.get('ADMIN_USERNAME', 'admin')
+    full_name = os.environ.get('ADMIN_FULLNAME', 'Administrador')
+    user = User(username=username, full_name=full_name,
+                role='jefe', must_change_password=False)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    click.secho(f'✓ Usuario "{username}" creado con rol jefe.', fg='green')
 
 
 @app.cli.command('seed-admin')
