@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "flask db upgrade && gunicorn run:app --workers 2 --timeout 120"
+startCommand = "python -m flask db upgrade && python -m flask seed-admin-env ; python -m gunicorn run:app --workers 2 --timeout 120"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"

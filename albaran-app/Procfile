@@ -1,1 +1,1 @@
-web: flask db upgrade && gunicorn run:app --workers 2 --timeout 120
+web: python -m flask db upgrade && python -m flask seed-admin-env ; python -m gunicorn run:app --workers 2 --timeout 120
