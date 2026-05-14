@@ -32,8 +32,8 @@ class Config:
     SESSION_COOKIE_SECURE   = os.environ.get('SESSION_COOKIE_SECURE', '1' if _in_prod else '0') == '1'
 
     # ── Datos de empresa ────────────────────────────────────────────────────
-    COMPANY_NAME    = os.environ.get('COMPANY_NAME',    'Maquinaria Obras S.L.')
-    COMPANY_ADDRESS = os.environ.get('COMPANY_ADDRESS', 'Calle Industria, 42 — 28001 Madrid')
-    COMPANY_PHONE   = os.environ.get('COMPANY_PHONE',   '+34 91 000 0000')
-    COMPANY_EMAIL   = os.environ.get('COMPANY_EMAIL',   'info@maquinariaobras.com')
-    COMPANY_CIF     = os.environ.get('COMPANY_CIF',     'B-12345678')
+    COMPANY_NAME    = os.environ.get('COMPANY_NAME',    'Soluciones Integrales de Maquinaria Sur')
+    COMPANY_ADDRESS = os.environ.get('COMPANY_ADDRESS', 'Calle Gabriel Ramos Bejarano 122 A-B, 14014, Córdoba')
+    COMPANY_PHONE   = os.environ.get('COMPANY_PHONE',   '957740004')
+    COMPANY_EMAIL   = os.environ.get('COMPANY_EMAIL',   'administracion@simsur.es')
+    COMPANY_CIF     = os.environ.get('COMPANY_CIF',     'B14933931')
