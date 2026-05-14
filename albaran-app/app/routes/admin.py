@@ -372,8 +372,15 @@ def estadisticas():
     ).all()
 
     # ── Tendencia mensual de ingresos ──────────────────────────────────────────
+    # Función de truncamiento a YYYY-MM portable entre SQLite y PostgreSQL.
+    dialect_name = db.engine.dialect.name
+    if dialect_name == 'postgresql':
+        month_expr = func.to_char(DeliveryNote.rental_end, 'YYYY-MM')
+    else:  # sqlite, mysql, etc.
+        month_expr = func.strftime('%Y-%m', DeliveryNote.rental_end)
+
     monthly_revenue = db.session.query(
-        func.strftime('%Y-%m', DeliveryNote.rental_end).label('month'),
+        month_expr.label('month'),
         func.sum(DeliveryNote.total_price).label('revenue'),
         func.count(DeliveryNote.id).label('count'),
     ).filter(
