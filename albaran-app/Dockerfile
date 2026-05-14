@@ -22,4 +22,4 @@ ENV FLASK_APP=run.py
 EXPOSE 8000
 
 # Comando de arranque
-CMD ["sh", "-c", "flask db upgrade && flask seed-admin-env ; gunicorn run:app --bind 0.0.0.0:8000 --workers 2 --timeout 120"]
+CMD ["sh", "-c", "flask db upgrade && flask seed-admin-env && flask seed-demo ; gunicorn run:app --bind 0.0.0.0:8000 --workers 2 --timeout 120"]

@@ -27,6 +27,18 @@ def seed_admin_env():
     click.secho(f'✓ Usuario "{username}" creado con rol jefe.', fg='green')
 
 
+@app.cli.command('seed-demo')
+def seed_demo():
+    """Carga datos de demostración (máquinas, clientes, albaranes, reparaciones).
+    Solo actúa si la variable de entorno SEED_DEMO=1 está definida."""
+    if os.environ.get('SEED_DEMO') != '1':
+        click.echo('SEED_DEMO != 1 — saltando carga de datos de demo.')
+        return
+    click.echo('Cargando datos de demostración...')
+    import seed as seed_module
+    seed_module.seed()
+
+
 @app.cli.command('seed-admin')
 @click.option('--username', default='admin', show_default=True)
 @click.option('--password', default='cambiar_ahora', show_default=True)
