@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Nuevo albarán — Paso 2{% endblock %}
+{% block page_title %}Nuevo albarán{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto">
+
+  <div class="steps" style="margin-bottom:24px">
+    <div class="step done"><div class="step-num">✓</div> Cliente</div>
+    <div class="step-sep"></div>
+    <div class="step active"><div class="step-num">2</div> Datos del albarán</div>
+  </div>
+
+  <!-- Client summary -->
+  <div style="background:var(--blue-light);border:1px solid #bfdbfe;border-radius:var(--radius);
+              padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:16px">
+    <div>
+      <span style="font-size:11px;font-weight:600;color:var(--blue);text-transform:uppercase">Cliente seleccionado</span><br>
+      <strong>{{ client.company_name }}</strong>
+      <span style="font-family:monospace;font-size:12px;color:var(--grey-400);margin-left:8px">{{ client.client_code }}</span>
+    </div>
+    <a href="{{ url_for('albaranes.new_step1') }}" class="btn btn-outline btn-sm" style="margin-left:auto">Cambiar</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      Datos del albarán
+      <span style="font-family:monospace;font-size:13px;color:var(--grey-400)">{{ albaran_number }}</span>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('albaranes.save') }}" id="albaran-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="client_id" value="{{ client.id }}">
+
+        <div class="form-grid">
+
+          <!-- Dates -->
+          <div class="form-group">
+            <label class="required">Fecha de inicio</label>
+            <input type="date" name="rental_start" id="rental_start" required
+                   value="{{ today }}">
+          </div>
+          <div class="form-group">
+            <label>Fecha de fin <span style="color:var(--grey-400);font-weight:400">(dejar vacío si es alquiler abierto)</span></label>
+            <input type="date" name="rental_end">
+          </div>
+
+          <!-- Delegación -->
+          <div class="form-group">
+            <label class="required">Delegación</label>
+            <select name="delegacion" required>
+              <option value="">— Seleccionar —</option>
+              {% for d in delegaciones %}
+                <option value="{{ d }}" {{ 'selected' if d == default_delegacion }}>{{ d }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Location -->
+          <div class="form-group">
+            <label>Obra / Ubicación</label>
+            <input type="text" name="location" placeholder="Nombre de la obra o dirección de entrega">
+          </div>
+
+          <!-- Pricing mode -->
+          <div class="form-group full">
+            <label class="required">Modalidad de precio</label>
+            <div class="pricing-toggle" style="max-width:400px">
+              <input type="radio" name="pricing_mode" id="mode-open"   value="open"   checked>
+              <label for="mode-open">📅 Precio abierto (tarifa × tiempo)</label>
+              <input type="radio" name="pricing_mode" id="mode-closed" value="closed">
+              <label for="mode-closed">🔒 Precio cerrado (total fijo)</label>
+            </div>
+          </div>
+
+          <!-- Open price fields -->
+          <div id="open-price-fields" class="form-group full">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Tarifa</label>
+                <input type="number" name="price_rate" min="0" step="0.01" placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label>Unidad</label>
+                <select name="price_unit">
+                  <option value="day">Por día</option>
+                  <option value="week">Por semana</option>
+                  <option value="month">Por mes</option>
+                </select>
+              </div>
+            </div>
+            <span class="form-hint">El total se calculará automáticamente al cerrar el albarán según la duración real.</span>
+          </div>
+
+          <!-- Closed price fields -->
+          <div id="closed-price-fields" class="form-group" style="display:none">
+            <label>Total acordado (€)</label>
+            <input type="number" name="total_price" min="0" step="0.01" placeholder="0.00">
+            <span class="form-hint">Precio fijo acordado con el cliente, independiente de la duración.</span>
+          </div>
+
+          <!-- Machines -->
+          <div class="form-group full">
+            <label class="required">Máquinas</label>
+            <div class="machine-picker">
+              <input type="text" id="machine-picker-input"
+                     placeholder="Buscar máquina por código o nombre…"
+                     autocomplete="off">
+              <div class="machine-picker-results" id="machine-picker-results"></div>
+            </div>
+            <div class="machine-selected-list" id="machine-selected-list"></div>
+            <span class="form-hint">Puedes añadir varias máquinas al mismo albarán.</span>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-group full">
+            <label>Observaciones</label>
+            <textarea name="notes" placeholder="Condiciones especiales, accesorios incluidos, notas de entrega…"></textarea>
+          </div>
+
+          <!-- Created by (informativo — el sistema usa el usuario en sesión) -->
+          <div class="form-group">
+            <label>Creado por</label>
+            <input type="text" value="{{ current_user.full_name }}" disabled
+                   style="background:var(--grey-100);color:var(--grey-400)">
+          </div>
+
+        </div>
+
+        <div style="margin-top:20px;display:flex;gap:8px">
+          <button type="submit" class="btn btn-primary">Crear albarán</button>
+          <a href="{{ url_for('albaranes.new_step1') }}" class="btn btn-outline">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Set today as default start date
+  const startInput = document.getElementById('rental_start');
+  if (startInput && !startInput.value) {
+    startInput.value = new Date().toISOString().split('T')[0];
+  }
+</script>
+{% endblock %}

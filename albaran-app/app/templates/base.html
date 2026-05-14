@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Gestión de Albaranes{% endblock %} — Maquinaria</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <script>
+    (function() {
+      var t = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="{{ url_for('static', filename='img/sim_logo.png') }}"
+           alt="SIM — Soluciones Integrales de Maquinaria Sur"
+           style="width:100%;max-width:170px;display:block;margin:0 auto 6px">
+      <small style="display:block;text-align:center">Gestión de Albaranes</small>
+    </div>
+    <nav>
+      <a href="{{ url_for('dashboard.index') }}"
+         class="{% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+        <span class="icon">&#9636;</span> Dashboard
+      </a>
+
+      <div class="nav-section">Albaranes</div>
+      <a href="{{ url_for('albaranes.index') }}"
+         class="{% if request.blueprint == 'albaranes' and request.endpoint != 'albaranes.new_step1' and request.endpoint != 'albaranes.new_step2' %}active{% endif %}">
+        <span class="icon">&#128196;</span> Todos los albaranes
+      </a>
+      <a href="{{ url_for('albaranes.new_step1') }}"
+         class="{% if request.endpoint in ('albaranes.new_step1','albaranes.new_step2') %}active{% endif %}">
+        <span class="icon">&#43;</span> Nuevo albarán
+      </a>
+
+      <div class="nav-section">Clientes</div>
+      <a href="{{ url_for('clients.index') }}"
+         class="{% if request.blueprint == 'clients' and request.endpoint != 'clients.new' %}active{% endif %}">
+        <span class="icon">&#128100;</span> Clientes
+      </a>
+      <a href="{{ url_for('clients.new') }}"
+         class="{% if request.endpoint == 'clients.new' %}active{% endif %}">
+        <span class="icon">&#43;</span> Nuevo cliente
+      </a>
+
+      <div class="nav-section">Maquinaria</div>
+      <a href="{{ url_for('machines.index') }}"
+         class="{% if request.blueprint == 'machines' and request.endpoint != 'machines.new' %}active{% endif %}">
+        <span class="icon">&#128663;</span> Maquinaria
+      </a>
+      <a href="{{ url_for('machines.new') }}"
+         class="{% if request.endpoint == 'machines.new' %}active{% endif %}">
+        <span class="icon">&#43;</span> Nueva máquina
+      </a>
+      <a href="{{ url_for('disponibilidad.index') }}"
+         class="{% if request.blueprint == 'disponibilidad' %}active{% endif %}">
+        <span class="icon">&#128197;</span> Disponibilidad
+      </a>
+      <a href="{{ url_for('reparaciones.index') }}"
+         class="{% if request.blueprint == 'reparaciones' %}active{% endif %}">
+        <span class="icon">&#128295;</span> Reparaciones
+      </a>
+
+      <div class="nav-section">Mi cuenta</div>
+      <a href="{{ url_for('auth.historial') }}"
+         class="{% if request.endpoint == 'auth.historial' %}active{% endif %}">
+        <span class="icon">&#128203;</span> Mi historial
+      </a>
+      {% if current_user.is_authenticated and (current_user.is_jefe or current_user.has_permission('ver_historial_global') or current_user.has_permission('ver_historial_parcial')) %}
+      <a href="{{ url_for('admin.historial') }}"
+         class="{% if request.endpoint == 'admin.historial' %}active{% endif %}">
+        <span class="icon">&#128202;</span> Historial global
+      </a>
+      {% endif %}
+      {% if current_user.is_authenticated and (current_user.is_jefe or current_user.has_permission('conceder_permisos')) %}
+      <a href="{{ url_for('admin.usuarios') }}"
+         class="{% if request.blueprint == 'admin' and request.endpoint in ('admin.usuarios', 'admin.nuevo_usuario') %}active{% endif %}">
+        <span class="icon">&#128101;</span> Usuarios
+      </a>
+      {% endif %}
+      {% if current_user.is_authenticated and current_user.is_jefe %}
+      <a href="{{ url_for('admin.permisos') }}"
+         class="{% if request.endpoint == 'admin.permisos' %}active{% endif %}">
+        <span class="icon">&#128273;</span> Permisos
+      </a>
+      {% endif %}
+      {% if current_user.is_authenticated and (current_user.is_jefe or current_user.has_permission('ver_estadisticas')) %}
+      <a href="{{ url_for('admin.estadisticas') }}"
+         class="{% if request.endpoint == 'admin.estadisticas' %}active{% endif %}">
+        <span class="icon">&#128200;</span> Estadísticas
+      </a>
+      {% endif %}
+    </nav>
+
+    <div class="theme-toggle-wrap">
+      <button id="theme-toggle" class="theme-toggle-btn" title="Cambiar tema claro/oscuro">
+        <span class="theme-icon-moon">🌙</span>
+        <span class="theme-icon-sun">☀️</span>
+        <span id="theme-label">Modo oscuro</span>
+      </button>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div class="sidebar-user">
+      <div class="sidebar-user-name">{{ current_user.full_name }}</div>
+      <div class="sidebar-user-role">{{ 'Jefe' if current_user.is_jefe else 'Trabajador' }}</div>
+      <div class="sidebar-user-links">
+        <a href="{{ url_for('auth.change_password') }}">Cambiar contraseña</a>
+        <form method="POST" action="{{ url_for('auth.logout') }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit"
+                  style="background:none;border:none;padding:0;color:inherit;
+                         cursor:pointer;font:inherit;text-decoration:underline">
+            Cerrar sesión
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+    {% block topbar %}
+    <div class="topbar">
+      <h1>{% block page_title %}Panel{% endblock %}</h1>
+      <div class="topbar-actions">{% block topbar_actions %}{% endblock %}</div>
+    </div>
+    {% endblock %}
+
+    <div class="page-body">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="alerts">
+            {% for cat, msg in messages %}
+              <div class="alert alert-{{ cat }}">
+                {{ msg }}
+                <button class="alert-close" type="button">&#215;</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

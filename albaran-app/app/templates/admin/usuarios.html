@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}Usuarios{% endblock %}
+{% block page_title %}Gestión de usuarios{% endblock %}
+
+{% block topbar_actions %}
+  {% if current_user.is_jefe %}
+    <a href="{{ url_for('admin.nuevo_usuario') }}" class="btn btn-primary">+ Nuevo usuario</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% for user in users %}
+<div class="card" style="margin-bottom:1rem">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+
+    {# — Info del usuario — #}
+    <div>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.25rem">
+        <strong style="font-size:1rem">{{ user.username }}</strong>
+        <span class="badge {{ 'badge-blue' if user.is_jefe else 'badge-grey' }}">
+          {{ 'Jefe' if user.is_jefe else 'Trabajador' }}
+        </span>
+        {% if not user.is_active %}
+          <span class="badge badge-red">Inactivo</span>
+        {% endif %}
+        {% if user.must_change_password %}
+          <span class="badge badge-orange">Debe cambiar contraseña</span>
+        {% endif %}
+      </div>
+      <div style="color:var(--grey-600);font-size:.9rem">{{ user.full_name }}</div>
+      <div style="color:var(--grey-400);font-size:.8rem;margin-top:.15rem">
+        Alta: {{ user.created_at.strftime('%d/%m/%Y') }}
+      </div>
+    </div>
+
+    {# — Acciones (solo jefe, no sobre sí mismo) — #}
+    {% if current_user.is_jefe and user.id != current_user.id %}
+    <div style="display:flex;gap:.5rem;align-items:center">
+      <form method="POST" action="{{ url_for('admin.toggle_active', user_id=user.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm {{ 'btn-outline' if user.is_active else 'btn-secondary' }}">
+          {{ 'Desactivar' if user.is_active else 'Activar' }}
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  {# — Permisos activos — #}
+  {% set active_perms = user.permissions.filter_by(revoked_at=None).all() %}
+  {% if active_perms %}
+  <div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--grey-100)">
+    <div style="font-size:.8rem;font-weight:600;color:var(--grey-400);text-transform:uppercase;
+                letter-spacing:.05em;margin-bottom:.4rem">Permisos activos</div>
+    <div style="display:flex;flex-direction:column;gap:.4rem">
+      {% for perm in active_perms %}
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+        <span class="badge badge-orange" style="font-size:.75rem">{{ perm.permission }}</span>
+        {% if perm.permission == 'ver_historial_parcial' %}
+          <span style="font-size:.8rem;color:var(--grey-600)">
+            Targets: {% for t in perm.targets.all() %}{{ t.target_user.username if t.target_user else '?' }}{% if not loop.last %}, {% endif %}{% endfor %}
+          </span>
+        {% endif %}
+        {% if perm.permission == 'ver_albaranes_delegacion' %}
+          <span style="font-size:.8rem;color:var(--grey-600)">
+            Delegaciones: {% for t in perm.targets.all() %}{{ t.target_delegacion }}{% if not loop.last %}, {% endif %}{% endfor %}
+          </span>
+        {% endif %}
+        <span style="font-size:.75rem;color:var(--grey-400)">
+          por {{ perm.grantor.username }} · {{ perm.granted_at.strftime('%d/%m/%Y') }}
+        </span>
+        {% if current_user.is_jefe or current_user.has_permission('conceder_permisos') %}
+        <form method="POST"
+              action="{{ url_for('admin.revoke_permission', user_id=user.id, perm_id=perm.id) }}"
+              style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-outline"
+                  onclick="return confirm('¿Revocar permiso {{ perm.permission }}?')">
+            Revocar
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# — Conceder nuevo permiso — #}
+  {% if (current_user.is_jefe or current_user.has_permission('conceder_permisos'))
+        and not user.is_jefe and user.id != current_user.id %}
+  <details style="margin-top:.75rem">
+    <summary style="cursor:pointer;font-size:.85rem;color:var(--brand-orange);font-weight:600">
+      + Conceder permiso
+    </summary>
+    <form method="POST"
+          action="{{ url_for('admin.grant_permission', user_id=user.id) }}"
+          style="margin-top:.6rem;display:flex;flex-direction:column;gap:.6rem;max-width:480px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label style="font-size:.85rem">Permiso</label>
+        <select name="permission" class="form-control" id="perm-select-{{ user.id }}"
+                onchange="toggleTargets(this, {{ user.id }})">
+          {% for perm_name, perm_label in permissions %}
+            {% if not user.get_active_permission(perm_name) %}
+              {% if is_jefe or perm_name not in high_privilege_perms %}
+              <option value="{{ perm_name }}">{{ perm_label }}</option>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div id="targets-{{ user.id }}" style="display:none">
+        <div class="form-group">
+          <label style="font-size:.85rem">Usuarios cuyo historial podrá ver</label>
+          <div style="display:flex;flex-direction:column;gap:.25rem;padding:.5rem;
+                      border:1px solid var(--grey-200);border-radius:var(--radius);max-height:180px;overflow-y:auto">
+            {% for u in all_users %}
+              {% if u.id != user.id %}
+              <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.875rem">
+                <input type="checkbox" name="targets[]" value="{{ u.id }}">
+                {{ u.username }} ({{ u.full_name }})
+              </label>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div id="delegaciones-{{ user.id }}" style="display:none">
+        <div class="form-group">
+          <label style="font-size:.85rem">Delegaciones a las que tendrá acceso</label>
+          <div style="display:flex;flex-direction:column;gap:.25rem;padding:.5rem;
+                      border:1px solid var(--grey-200);border-radius:var(--radius)">
+            {% for d in delegaciones %}
+            <label style="display:flex;align-items:center;gap:.4rem;font-weight:400;font-size:.875rem">
+              <input type="checkbox" name="delegaciones[]" value="{{ d }}">
+              {{ d }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary btn-sm">Conceder</button>
+      </div>
+    </form>
+  </details>
+  {% endif %}
+
+</div>
+{% endfor %}
+
+{% if not users %}
+<div class="empty-state"><p>No hay usuarios registrados.</p></div>
+{% endif %}
+
+<script>
+function toggleTargets(sel, userId) {
+  document.getElementById('targets-' + userId).style.display =
+    sel.value === 'ver_historial_parcial' ? 'block' : 'none';
+  document.getElementById('delegaciones-' + userId).style.display =
+    sel.value === 'ver_albaranes_delegacion' ? 'block' : 'none';
+}
+document.querySelectorAll('[id^="perm-select-"]').forEach(function(sel) {
+  var uid = sel.id.replace('perm-select-', '');
+  toggleTargets(sel, uid);
+});
+</script>
+{% endblock %}

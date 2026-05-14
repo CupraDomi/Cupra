@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard — Flota{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('albaranes.new_step1') }}" class="btn btn-primary">+ Nuevo albarán</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total }}</div>
+    <div class="stat-label">Máquinas totales</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-value">{{ stats.free }}</div>
+    <div class="stat-label">🟢 Libres</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-value">{{ stats.occupied }}</div>
+    <div class="stat-label">🔴 Ocupadas</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="stat-value">{{ stats.reserved }}</div>
+    <div class="stat-label">🟠 Reservadas</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-value">{{ stats.active_albaranes }}</div>
+    <div class="stat-label">Albaranes activos</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total_clients }}</div>
+    <div class="stat-label">Clientes</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="filters-bar" style="margin-bottom:16px">
+  <select name="cat" onchange="this.form.submit()">
+    <option value="">Todas las categorías</option>
+    {% for code, label in categories %}
+      <option value="{{ code }}" {% if cat_filter == code %}selected{% endif %}>{{ code }} — {{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="status" onchange="this.form.submit()">
+    <option value="">Todos los estados</option>
+    <option value="free"     {% if status_filter=='free' %}selected{% endif %}>🟢 Libres</option>
+    <option value="occupied" {% if status_filter=='occupied' %}selected{% endif %}>🔴 Ocupadas</option>
+    <option value="reserved" {% if status_filter=='reserved' %}selected{% endif %}>🟠 Reservadas</option>
+  </select>
+  {% if cat_filter or status_filter %}
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline btn-sm">Limpiar filtros</a>
+  {% endif %}
+  <span style="margin-left:auto;font-size:12px;color:var(--grey-400)">{{ machines|length }} máquina(s)</span>
+</form>
+
+<!-- Machine grid -->
+{% if machines %}
+  <div class="machine-grid">
+    {% for m in machines %}
+      <a href="{{ url_for('machines.detail', machine_id=m.id) }}" class="machine-card {{ m.status_color }}">
+        <div class="mc-code">{{ m.code }}</div>
+        <div class="mc-name">{{ m.name }}</div>
+        <div class="mc-status badge-dot">{{ m.status_label }}</div>
+        <div class="mc-cat">{{ m.category }} {% if m.variant %}· {{ m.variant }}{% endif %}</div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🏗️</div>
+    <h3>No hay máquinas con estos filtros</h3>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline" style="margin-top:12px">Ver todas</a>
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}Mi historial{% endblock %}
+{% block page_title %}Mi historial de actividad{% endblock %}
+
+{% block content %}
+
+{% set action_labels = {
+  'created':             ('Creado',    'badge-green'),
+  'updated':             ('Editado',   'badge-blue'),
+  'deleted':             ('Eliminado', 'badge-red'),
+  'login':               ('Login',     'badge-grey'),
+  'logout':              ('Logout',    'badge-grey'),
+  'permission_granted':  ('Permiso +', 'badge-orange'),
+  'permission_revoked':  ('Permiso -', 'badge-red'),
+} %}
+
+{% set entity_labels = {
+  'delivery_note': 'Albarán',
+  'machine':       'Máquina',
+  'client':        'Cliente',
+  'user':          'Usuario',
+  'permission':    'Permiso',
+} %}
+
+{% if entries %}
+<div class="table-wrapper">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Fecha y hora</th>
+        <th>Acción</th>
+        <th>Tipo</th>
+        <th>Registro</th>
+        <th>Cambios</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry, diff in entries %}
+      <tr>
+        <td style="white-space:nowrap;color:var(--grey-600);font-size:.85rem">
+          {{ entry.timestamp.strftime('%d/%m/%Y %H:%M') }}
+        </td>
+        <td>
+          {% set lbl, cls = action_labels.get(entry.action, (entry.action, 'badge-grey')) %}
+          <span class="badge {{ cls }}">{{ lbl }}</span>
+        </td>
+        <td style="color:var(--grey-600);font-size:.9rem">
+          {{ entity_labels.get(entry.entity, entry.entity) }}
+        </td>
+        <td style="font-size:.9rem">{{ entry.entity_label or '—' }}</td>
+        <td>
+          {% if diff and diff is mapping %}
+            <details>
+              <summary style="cursor:pointer;font-size:.8rem;color:var(--grey-600)">
+                {{ diff|length }} campo{{ 's' if diff|length != 1 }}
+              </summary>
+              <table class="diff-table">
+                <thead><tr><th>Campo</th><th>Antes</th><th>Después</th></tr></thead>
+                <tbody>
+                  {% for field, vals in diff.items() %}
+                  <tr>
+                    <td>{{ field }}</td>
+                    <td class="diff-old">{{ vals[0] if vals[0] is not none else '—' }}</td>
+                    <td class="diff-new">{{ vals[1] if vals[1] is not none else '—' }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </details>
+          {% else %}
+            <span style="color:var(--grey-400)">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Paginación #}
+{% if pagination.pages > 1 %}
+<div class="pagination">
+  {% if pagination.has_prev %}
+    <a href="{{ url_for('auth.historial', page=pagination.prev_num) }}" class="btn btn-secondary btn-sm">← Anterior</a>
+  {% endif %}
+  <span style="color:var(--grey-600);font-size:.9rem">
+    Página {{ pagination.page }} de {{ pagination.pages }}
+    &nbsp;·&nbsp; {{ pagination.total }} registros
+  </span>
+  {% if pagination.has_next %}
+    <a href="{{ url_for('auth.historial', page=pagination.next_num) }}" class="btn btn-secondary btn-sm">Siguiente →</a>
+  {% endif %}
+</div>
+{% else %}
+<p style="color:var(--grey-400);font-size:.85rem;margin-top:.75rem">
+  {{ pagination.total }} registro{{ 's' if pagination.total != 1 }} en total.
+</p>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <p>No hay actividad registrada todavía.</p>
+</div>
+{% endif %}
+
+{% endblock %}

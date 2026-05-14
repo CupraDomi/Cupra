@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Disponibilidad{% endblock %}
+{% block page_title %}Disponibilidad de maquinaria{% endblock %}
+
+{% block content %}
+
+{# — Formulario de búsqueda — #}
+<div class="card" style="margin-bottom:1.25rem">
+  <div class="card-body">
+    <form method="get" class="filters-bar" style="flex-wrap:wrap;gap:.75rem">
+      <div style="display:flex;flex-direction:column;gap:.25rem">
+        <label style="font-size:.75rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;letter-spacing:.05em">Desde</label>
+        <input type="date" name="date_from" value="{{ date_from }}" required style="min-width:150px">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.25rem">
+        <label style="font-size:.75rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;letter-spacing:.05em">Hasta</label>
+        <input type="date" name="date_to" value="{{ date_to }}" required style="min-width:150px">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.25rem">
+        <label style="font-size:.75rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;letter-spacing:.05em">Familia</label>
+        <select name="category">
+          <option value="">Todas las familias</option>
+          {% for code, label in categories %}
+            <option value="{{ code }}" {% if category_f == code %}selected{% endif %}>{{ code }} — {{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.25rem">
+        <label style="font-size:.75rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;letter-spacing:.05em">Delegación actual</label>
+        <select name="delegacion">
+          <option value="">Todas las delegaciones</option>
+          {% for d in delegaciones %}
+            <option value="{{ d }}" {% if delegacion_f == d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:.5rem">
+        <button type="submit" class="btn btn-primary">Consultar disponibilidad</button>
+        {% if searched %}
+          <a href="{{ url_for('disponibilidad.index') }}" class="btn btn-outline">✕ Limpiar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if error_msg %}
+<div class="alert alert-danger" style="margin-bottom:1rem">{{ error_msg }}</div>
+{% endif %}
+
+{% if searched %}
+
+{# — Resumen — #}
+{% set total = available|length + unavailable|length %}
+<div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap">
+  <div class="card" style="flex:1;min-width:180px;border-left:4px solid var(--green)">
+    <div class="card-body" style="text-align:center;padding:1rem">
+      <div style="font-size:2rem;font-weight:800;color:var(--green)">{{ available|length }}</div>
+      <div style="font-size:.85rem;color:var(--grey-600);margin-top:.25rem">Disponibles</div>
+    </div>
+  </div>
+  <div class="card" style="flex:1;min-width:180px;border-left:4px solid var(--red)">
+    <div class="card-body" style="text-align:center;padding:1rem">
+      <div style="font-size:2rem;font-weight:800;color:var(--red)">{{ unavailable|length }}</div>
+      <div style="font-size:.85rem;color:var(--grey-600);margin-top:.25rem">No disponibles</div>
+    </div>
+  </div>
+  <div class="card" style="flex:1;min-width:180px;border-left:4px solid var(--brand-navy)">
+    <div class="card-body" style="text-align:center;padding:1rem">
+      <div style="font-size:2rem;font-weight:800;color:var(--brand-navy)">{{ total }}</div>
+      <div style="font-size:.85rem;color:var(--grey-600);margin-top:.25rem">Máquinas consultadas</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
+
+  {# ── Disponibles ── #}
+  <div class="card">
+    <div class="card-header" style="background:var(--green);color:#fff;border-radius:var(--radius) var(--radius) 0 0">
+      ✓ Disponibles ({{ available|length }})
+    </div>
+    {% if available %}
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Familia</th>
+              <th>Nombre</th>
+              <th>Delegación actual</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in available %}
+            <tr>
+              <td class="code-cell">
+                <a href="{{ url_for('machines.detail', machine_id=m.id) }}">{{ m.code }}</a>
+              </td>
+              <td>
+                <span style="font-family:monospace;font-size:.75rem;font-weight:700;
+                             background:var(--brand-navy);color:#fff;
+                             padding:.1rem .35rem;border-radius:3px">{{ m.category }}</span>
+              </td>
+              <td style="font-size:.875rem">{{ m.name }}</td>
+              <td>
+                {% if m.current_delegacion %}
+                  <span class="badge badge-grey" style="font-size:.72rem">{{ m.current_delegacion }}</span>
+                {% else %}
+                  <span style="color:var(--grey-400);font-size:.8rem">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{{ url_for('albaranes.new_step1') }}" class="btn btn-outline btn-sm">Alquilar</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:2rem">
+      <p style="color:var(--grey-400)">No hay máquinas disponibles en ese período.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── No disponibles ── #}
+  <div class="card">
+    <div class="card-header" style="background:var(--red);color:#fff;border-radius:var(--radius) var(--radius) 0 0">
+      ✗ No disponibles ({{ unavailable|length }})
+    </div>
+    {% if unavailable %}
+    <div class="card-body" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Familia</th>
+              <th>Nombre</th>
+              <th>Motivo / Albarán</th>
+              <th>Delegación</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m, notes in unavailable %}
+            <tr>
+              <td class="code-cell">
+                <a href="{{ url_for('machines.detail', machine_id=m.id) }}">{{ m.code }}</a>
+              </td>
+              <td>
+                <span style="font-family:monospace;font-size:.75rem;font-weight:700;
+                             background:var(--brand-navy);color:#fff;
+                             padding:.1rem .35rem;border-radius:3px">{{ m.category }}</span>
+              </td>
+              <td style="font-size:.875rem">{{ m.name }}</td>
+              <td>
+                {% if m.status == 'repair' %}
+                  <span class="badge badge-orange">En reparación</span>
+                  {% if m.repair_notes %}
+                    <div style="font-size:.72rem;color:var(--orange);margin-top:.2rem">{{ m.repair_notes[:60] }}{% if m.repair_notes|length > 60 %}…{% endif %}</div>
+                  {% endif %}
+                {% elif notes %}
+                  {% for n in notes %}
+                  <div style="margin-bottom:{% if not loop.last %}.35rem{% else %}0{% endif %}">
+                    <a href="{{ url_for('albaranes.detail', note_id=n.id) }}"
+                       style="font-family:monospace;font-size:.8rem;font-weight:700;color:var(--brand-orange)">
+                      {{ n.albaran_number }}
+                    </a>
+                    <span style="font-size:.75rem;color:var(--grey-600)"> — {{ n.client.company_name }}</span>
+                    <div style="font-size:.72rem;color:var(--grey-400)">
+                      {{ n.rental_start.strftime('%d/%m/%y') }} →
+                      {% if n.rental_end %}{{ n.rental_end.strftime('%d/%m/%y') }}{% else %}abierto{% endif %}
+                    </div>
+                  </div>
+                  {% endfor %}
+                {% else %}
+                  <span class="badge badge-{{ m.status_color }}">{{ m.status_label }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if m.current_delegacion %}
+                  <span class="badge badge-grey" style="font-size:.72rem">{{ m.current_delegacion }}</span>
+                {% else %}
+                  <span style="color:var(--grey-400);font-size:.8rem">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:2rem">
+      <p style="color:var(--grey-400)">Todas las máquinas están disponibles.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% else %}
+{# Estado inicial — sin búsqueda #}
+<div class="empty-state" style="padding:3rem">
+  <div class="empty-icon" style="font-size:3rem">📅</div>
+  <h3>Consulta la disponibilidad</h3>
+  <p style="color:var(--grey-500);max-width:400px;margin:.5rem auto 0">
+    Selecciona un rango de fechas para ver qué máquinas están libres y cuáles están ocupadas en ese período.
+  </p>
+</div>
+{% endif %}
+
+{% endblock %}

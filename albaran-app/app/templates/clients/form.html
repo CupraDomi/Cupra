@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if client else 'Nuevo' }} cliente{% endblock %}
+{% block page_title %}{{ 'Editar cliente' if client else 'Nuevo cliente' }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('clients.index') }}" class="btn btn-outline">← Volver</a>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:800px">
+  <div class="card-header">
+    {{ 'Editar: ' + client.client_code if client else 'Registrar nuevo cliente' }}
+    {% if client %}
+      <span class="badge badge-grey">{{ client.client_code }}</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <!-- Client type -->
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;color:var(--grey-600);display:block;margin-bottom:8px">
+          Tipo de cliente
+        </label>
+        <div class="pricing-toggle" style="max-width:300px">
+          <input type="radio" name="client_type" id="type-company" value="company"
+                 {{ 'checked' if not client or client.client_type=='company' }}>
+          <label for="type-company">🏢 Empresa</label>
+          <input type="radio" name="client_type" id="type-individual" value="individual"
+                 {{ 'checked' if client and client.client_type=='individual' }}>
+          <label for="type-individual">👤 Autónomo</label>
+        </div>
+      </div>
+
+      <div class="form-grid">
+
+        <div class="form-group full">
+          <label class="required" id="name-label">Razón social / Nombre</label>
+          <input type="text" name="company_name" id="company_name" required
+                 placeholder="Nombre de la empresa o del autónomo"
+                 value="{{ client.company_name if client else '' }}">
+        </div>
+
+        {% if not client %}
+        <div class="form-group">
+          <label>Abreviatura para código <span style="color:var(--grey-400)">(se sugiere automáticamente)</span></label>
+          <input type="text" name="abbrev" id="abbrev" maxlength="6"
+                 placeholder="ej. FERRO, GARCIA"
+                 style="text-transform:uppercase;font-family:monospace;font-weight:700">
+          <span class="form-hint">Código generado: <strong id="code-preview">C-???-###</strong></span>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label id="taxid-label">CIF / DNI / NIE</label>
+          <input type="text" name="tax_id" placeholder="B-12345678 / 12345678A / X1234567A"
+                 value="{{ client.tax_id if client else '' }}"
+                 style="text-transform:uppercase">
+        </div>
+
+        <div class="form-group full">
+          <label>Dirección</label>
+          <input type="text" name="address" placeholder="Calle, número, CP, ciudad"
+                 value="{{ client.address if client else '' }}">
+        </div>
+
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="tel" name="phone" placeholder="+34 600 000 000"
+                 value="{{ client.phone if client else '' }}">
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="correo@empresa.com"
+                 value="{{ client.email if client else '' }}">
+        </div>
+
+        <div class="form-group full">
+          <label>Notas internas</label>
+          <textarea name="notes">{{ client.notes if client else '' }}</textarea>
+        </div>
+
+        <!-- Contacts -->
+        <div class="form-section-title">Personas de contacto</div>
+        <div id="contacts-wrap" style="grid-column:1/-1">
+          {% for ct in contacts %}
+          <div class="contact-row">
+            <input type="text" name="contact_name[]" value="{{ ct.name }}" placeholder="Nombre *">
+            <input type="text" name="contact_role[]" value="{{ ct.role or '' }}" placeholder="Cargo">
+            <input type="tel"  name="contact_phone[]" value="{{ ct.phone or '' }}" placeholder="Teléfono">
+            <input type="email" name="contact_email[]" value="{{ ct.email or '' }}" placeholder="Email">
+            <button type="button" class="btn btn-outline btn-sm remove-contact">×</button>
+          </div>
+          {% endfor %}
+        </div>
+        <div style="grid-column:1/-1">
+          <button type="button" id="add-contact-btn" class="btn btn-outline btn-sm">+ Añadir contacto</button>
+        </div>
+
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:8px;align-items:center">
+        <button type="submit" class="btn btn-primary">
+          {{ 'Guardar cambios' if client else 'Crear cliente' }}
+        </button>
+        <a href="{{ url_for('clients.index') }}" class="btn btn-outline">Cancelar</a>
+        {% if client %}
+        <form method="post" action="{{ url_for('clients.delete', client_id=client.id) }}"
+              style="margin-left:auto"
+              onsubmit="return confirm('¿Eliminar cliente {{ client.company_name }}?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger btn-sm">Eliminar cliente</button>
+        </form>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Update label based on client type
+  const typeRadios = document.querySelectorAll('input[name="client_type"]');
+  const nameLabel  = document.getElementById('name-label');
+  const taxLabel   = document.getElementById('taxid-label');
+  function updateLabels() {
+    const t = document.querySelector('input[name="client_type"]:checked')?.value;
+    nameLabel.textContent = t === 'individual' ? 'Nombre y apellidos *' : 'Razón social *';
+    taxLabel.textContent  = t === 'individual' ? 'DNI / NIE' : 'CIF';
+  }
+  typeRadios.forEach(r => r.addEventListener('change', updateLabels));
+  updateLabels();
+</script>
+{% endblock %}

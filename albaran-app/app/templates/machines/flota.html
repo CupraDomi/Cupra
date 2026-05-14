@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Flota de maquinaria{% endblock %}
+{% block page_title %}Flota de maquinaria{% endblock %}
+
+{% block content %}
+
+{% if not groups %}
+<div class="empty-state">
+  <div class="empty-icon">🏗️</div>
+  <h3>No hay máquinas registradas</h3>
+</div>
+{% endif %}
+
+{% for cat_code, group in groups.items() %}
+<div style="margin-bottom:2rem">
+
+  {# — Cabecera de familia — #}
+  <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;
+              padding-bottom:.5rem;border-bottom:2px solid var(--brand-navy,#1a2e5a)">
+    <span style="font-family:monospace;font-size:.8rem;font-weight:700;
+                 background:var(--brand-navy,#1a2e5a);color:#fff;
+                 padding:.15rem .5rem;border-radius:4px">{{ cat_code }}</span>
+    <h2 style="margin:0;font-size:1.1rem;color:var(--brand-navy,#1a2e5a)">{{ group.label }}</h2>
+    <span style="margin-left:auto;font-size:.8rem;color:var(--grey-400)">
+      {{ group.machines|length }} máquina{{ 's' if group.machines|length != 1 }}
+    </span>
+  </div>
+
+  {# — Grid de tarjetas — #}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem">
+    {% for m in group.machines %}
+
+    {% set is_repair   = m.status == 'repair' %}
+    {% set is_occupied = m.status == 'occupied' %}
+    {% set is_free     = m.status == 'free' %}
+
+    <div style="border-radius:var(--radius);border:1px solid {{ 'var(--orange,#f97316)' if is_repair else 'var(--grey-200)' }};
+                background:{{ '#fff7ed' if is_repair else '#fff' }};
+                padding:.85rem 1rem;position:relative;overflow:hidden">
+
+      {# Franja de color de estado (borde izquierdo) #}
+      <div style="position:absolute;left:0;top:0;bottom:0;width:4px;
+                  background:{{ '#ef4444' if is_repair else ('#22c55e' if is_free else ('#3b82f6' if is_occupied else '#9ca3af')) }}">
+      </div>
+
+      <div style="padding-left:.5rem">
+
+        {# Código + estado #}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem;gap:.4rem;flex-wrap:wrap">
+          <a href="{{ url_for('machines.detail', machine_id=m.id) }}"
+             style="font-family:monospace;font-weight:700;font-size:.95rem;color:var(--brand-navy,#1a2e5a);text-decoration:none">
+            {{ m.code }}
+          </a>
+          <span class="badge badge-{{ 'orange' if is_repair else m.status_color }}"
+                style="font-size:.7rem">
+            {{ m.status_label }}
+          </span>
+        </div>
+
+        {# Nombre #}
+        <div style="font-size:.9rem;font-weight:600;margin-bottom:.2rem">{{ m.name }}</div>
+
+        {# Variante #}
+        {% if m.variant %}
+        <div style="font-size:.8rem;color:var(--grey-500);margin-bottom:.3rem">
+          Variante: <strong>{{ m.variant }}</strong>
+        </div>
+        {% endif %}
+
+        {# Especificaciones #}
+        {% if m.specs %}
+        <div style="font-size:.78rem;color:var(--grey-600);
+                    background:var(--grey-50);border-radius:4px;
+                    padding:.3rem .5rem;margin-top:.35rem;white-space:pre-line;line-height:1.5">
+          {{ m.specs }}
+        </div>
+        {% endif %}
+
+        {# Albarán activo si está ocupada #}
+        {% if is_occupied %}
+          {% for item in m.delivery_items.all() %}
+            {% if item.delivery_note.status == 'active' %}
+            <div style="font-size:.75rem;margin-top:.4rem;color:var(--blue)">
+              📋 Albarán:
+              <a href="{{ url_for('albaranes.detail', note_id=item.delivery_note.id) }}"
+                 style="font-family:monospace;font-weight:700">
+                {{ item.delivery_note.albaran_number }}
+              </a>
+              — {{ item.delivery_note.client.company_name }}
+            </div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+
+        {# Avería si está en reparación #}
+        {% if is_repair and m.repair_notes %}
+        <div style="margin-top:.5rem;padding:.4rem .6rem;
+                    background:#fef3c7;border:1px solid #fbbf24;border-radius:4px;
+                    font-size:.8rem;color:#92400e;white-space:pre-line;line-height:1.5">
+          <strong>⚠ Avería:</strong> {{ m.repair_notes }}
+        </div>
+        {% elif is_repair %}
+        <div style="margin-top:.5rem;font-size:.78rem;color:#92400e">
+          ⚠ En reparación — sin descripción registrada
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}

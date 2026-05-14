@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ya firmado — {{ note.albaran_number }}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .card {
+      background: #fff; border-radius: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.1);
+      padding: 2.5rem 2rem; text-align: center; max-width: 420px; width: 100%;
+    }
+    .icon { font-size: 4rem; color: #2ea44f; margin-bottom: 1rem; }
+    h1 { font-size: 1.3rem; color: #1e3a5f; margin-bottom: .5rem; }
+    p  { color: #666; font-size: .9rem; line-height: 1.6; }
+    .detail { margin-top: 1.25rem; background: #f0f4f8; border-radius: 8px; padding: .75rem 1rem; font-size: .85rem; color: #444; }
+    .detail strong { color: #1e3a5f; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✓</div>
+    <h1>Albarán ya firmado</h1>
+    <p>Este albarán ya fue firmado correctamente.</p>
+    {% if note.signer_name %}
+    <div class="detail">
+      Firmado por <strong>{{ note.signer_name }}</strong>
+      {% if note.signed_at %}
+        el <strong>{{ note.signed_at.strftime('%d/%m/%Y a las %H:%M') }}</strong>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>

@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% block title %}Estadísticas{% endblock %}
+{% block page_title %}Estadísticas de la empresa{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+/* ── Datos del servidor ─────────────────────────────────────────── */
+const fleetStatus = {
+  free:     {{ fleet_status_map.get('free', 0) }},
+  occupied: {{ fleet_status_map.get('occupied', 0) }},
+  repair:   {{ fleet_status_map.get('repair', 0) }},
+  reserved: {{ fleet_status_map.get('reserved', 0) }},
+};
+
+const catLabels  = {{ cat_stats | map(attribute='label') | list | tojson }};
+const catTotal   = {{ cat_stats | map(attribute='total')    | list | tojson }};
+const catOcc     = {{ cat_stats | map(attribute='occupied') | list | tojson }};
+const catRepair  = {{ cat_stats | map(attribute='repair')   | list | tojson }};
+
+const topMachCodes   = {{ top_machines | map(attribute='code') | list | tojson }};
+const topMachRentals = {{ top_machines | map(attribute='rentals') | list | tojson }};
+
+const monthLabels  = {{ monthly_revenue | map(attribute=0) | list | tojson }};
+const monthRevenue = {{ monthly_revenue | map(attribute=1) | list | tojson }};
+
+/* ── Helpers ──────────────────────────────────────────────────────── */
+const BRAND_NAVY   = getComputedStyle(document.documentElement).getPropertyValue('--brand-navy').trim()   || '#1e3a5f';
+const BRAND_ORANGE = getComputedStyle(document.documentElement).getPropertyValue('--brand-orange').trim() || '#f97316';
+const GREEN        = getComputedStyle(document.documentElement).getPropertyValue('--green').trim()        || '#16a34a';
+const RED          = getComputedStyle(document.documentElement).getPropertyValue('--red').trim()          || '#dc2626';
+const GREY         = getComputedStyle(document.documentElement).getPropertyValue('--grey-300').trim()     || '#d1d5db';
+
+Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--font-body') || 'Inter, sans-serif';
+Chart.defaults.color       = getComputedStyle(document.documentElement).getPropertyValue('--grey-700').trim() || '#374151';
+
+/* ── Donut: estado flota ──────────────────────────────────────────── */
+new Chart(document.getElementById('chartFleetStatus'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Libre', 'Ocupada', 'En reparación', 'Reservada'],
+    datasets: [{
+      data: [fleetStatus.free, fleetStatus.occupied, fleetStatus.repair, fleetStatus.reserved],
+      backgroundColor: [GREEN, RED, BRAND_ORANGE, '#ea580c'],
+      borderWidth: 2,
+    }],
+  },
+  options: {
+    cutout: '65%',
+    plugins: { legend: { position: 'bottom' } },
+  },
+});
+
+/* ── Bar: flota por categoría ─────────────────────────────────────── */
+new Chart(document.getElementById('chartCatFleet'), {
+  type: 'bar',
+  data: {
+    labels: catLabels,
+    datasets: [
+      { label: 'Libre',          data: catTotal.map((t,i)=>t-catOcc[i]-catRepair[i]), backgroundColor: GREEN + 'cc' },
+      { label: 'Ocupada',        data: catOcc,    backgroundColor: RED + 'cc' },
+      { label: 'En reparación',  data: catRepair, backgroundColor: BRAND_ORANGE + 'cc' },
+    ],
+  },
+  options: {
+    responsive: true,
+    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+    plugins: { legend: { position: 'bottom' } },
+  },
+});
+
+/* ── Bar: top 10 máquinas ──────────────────────────────────────────── */
+new Chart(document.getElementById('chartTopMachines'), {
+  type: 'bar',
+  data: {
+    labels: topMachCodes,
+    datasets: [{
+      label: 'Alquileres',
+      data:  topMachRentals,
+      backgroundColor: BRAND_NAVY + 'cc',
+      borderColor: BRAND_NAVY,
+      borderWidth: 1,
+    }],
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true } },
+  },
+});
+
+/* ── Line: ingresos mensuales ─────────────────────────────────────── */
+if (monthLabels.length) {
+  new Chart(document.getElementById('chartMonthly'), {
+    type: 'line',
+    data: {
+      labels: monthLabels,
+      datasets: [{
+        label: 'Ingresos (€)',
+        data:  monthRevenue,
+        borderColor: BRAND_NAVY,
+        backgroundColor: BRAND_NAVY + '22',
+        tension: 0.3,
+        fill: true,
+        pointBackgroundColor: BRAND_NAVY,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } },
+    },
+  });
+} else {
+  document.getElementById('chartMonthly').closest('.chart-wrap').innerHTML =
+    '<p style="text-align:center;color:var(--grey-400);padding:2rem">Sin datos de tendencia mensual aún</p>';
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<style>
+.stats-grid   { display:grid; gap:1rem; }
+.kpi-row      { grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); }
+.two-col      { grid-template-columns: 1fr 1fr; }
+.three-col    { grid-template-columns: repeat(3,1fr); }
+@media(max-width:900px){ .two-col,.three-col { grid-template-columns:1fr } }
+.kpi-card     { background:var(--white); border:1px solid var(--grey-200); border-radius:var(--radius);
+                padding:1.1rem 1.2rem; box-shadow:var(--shadow); }
+.kpi-value    { font-size:1.9rem; font-weight:700; color:var(--brand-navy); line-height:1; }
+.kpi-label    { font-size:.78rem; color:var(--grey-500); margin-top:.3rem; }
+.kpi-sub      { font-size:.82rem; color:var(--grey-400); margin-top:.15rem; }
+.chart-card   { background:var(--white); border:1px solid var(--grey-200); border-radius:var(--radius);
+                padding:1.2rem; box-shadow:var(--shadow); }
+.chart-title  { font-size:.95rem; font-weight:700; color:var(--brand-navy); margin-bottom:.9rem;
+                font-family:var(--font-heading); }
+.chart-wrap   { position:relative; }
+.data-table   { width:100%; border-collapse:collapse; font-size:.83rem; }
+.data-table th{ text-align:left; padding:.5rem .6rem; border-bottom:2px solid var(--grey-200);
+                color:var(--grey-500); font-weight:600; font-size:.75rem; text-transform:uppercase; }
+.data-table td{ padding:.45rem .6rem; border-bottom:1px solid var(--grey-100); }
+.data-table tr:last-child td { border-bottom:none; }
+.data-table .num { text-align:right; font-variant-numeric:tabular-nums; }
+.rank         { font-family:monospace; font-size:.7rem; background:var(--grey-100);
+                border-radius:3px; padding:.05rem .3rem; color:var(--grey-500); }
+.bar-inline   { display:inline-block; background:var(--brand-navy); border-radius:2px; height:6px; vertical-align:middle; }
+.section-head { font-size:.7rem; text-transform:uppercase; font-weight:700; letter-spacing:.05em;
+                color:var(--grey-400); margin:1.5rem 0 .6rem; }
+</style>
+
+{# ── KPIs ─────────────────────────────────────────────────────────── #}
+<div class="stats-grid kpi-row" style="margin-bottom:1.25rem">
+
+  <div class="kpi-card">
+    <div class="kpi-value">{{ total_machines }}</div>
+    <div class="kpi-label">Máquinas en flota</div>
+    <div class="kpi-sub">
+      {{ fleet_status_map.get('free',0) }} libres ·
+      {{ fleet_status_map.get('occupied',0) }} ocupadas ·
+      {{ fleet_status_map.get('repair',0) }} en reparación
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-value">{{ total_clients }}</div>
+    <div class="kpi-label">Clientes registrados</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-value">{{ total_albaranes }}</div>
+    <div class="kpi-label">Albaranes totales</div>
+    <div class="kpi-sub">{{ active_albaranes }} activos · {{ closed_albaranes }} cerrados</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-value">{{ active_albaranes }}</div>
+    <div class="kpi-label">Albaranes activos</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-value">{{ '{:,.0f}'.format(total_revenue).replace(',', '.') }} €</div>
+    <div class="kpi-label">Ingresos facturados</div>
+    <div class="kpi-sub">Albaranes cerrados con precio</div>
+  </div>
+
+  {% if total_albaranes %}
+  <div class="kpi-card">
+    <div class="kpi-value">
+      {% set pct = (active_albaranes / total_albaranes * 100)|round(1) %}
+      {{ pct }}%
+    </div>
+    <div class="kpi-label">Tasa de actividad</div>
+    <div class="kpi-sub">Albaranes activos / total</div>
+  </div>
+  {% endif %}
+
+  {% set total_fleet = fleet_status_map.get('free',0) + fleet_status_map.get('occupied',0) + fleet_status_map.get('repair',0) + fleet_status_map.get('reserved',0) %}
+  {% if total_fleet %}
+  <div class="kpi-card">
+    <div class="kpi-value">
+      {{ (fleet_status_map.get('occupied',0) / total_fleet * 100)|round(1) }}%
+    </div>
+    <div class="kpi-label">Utilización de flota</div>
+    <div class="kpi-sub">Máquinas ocupadas / total</div>
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── Gráficos: estado flota + tendencia mensual ───────────────────── #}
+<div class="stats-grid two-col" style="margin-bottom:1.25rem">
+
+  <div class="chart-card">
+    <div class="chart-title">Estado de la flota</div>
+    <div class="chart-wrap" style="max-height:280px;display:flex;align-items:center;justify-content:center">
+      <canvas id="chartFleetStatus" style="max-height:260px"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Ingresos mensuales (albaranes cerrados)</div>
+    <div class="chart-wrap">
+      <canvas id="chartMonthly"></canvas>
+    </div>
+  </div>
+
+</div>
+
+{# ── Gráfico: flota por categoría ─────────────────────────────────── #}
+<div class="chart-card" style="margin-bottom:1.25rem">
+  <div class="chart-title">Flota por familia de maquinaria</div>
+  <div class="chart-wrap">
+    <canvas id="chartCatFleet" style="max-height:280px"></canvas>
+  </div>
+</div>
+
+{# ── Tabla: categorías detalle ─────────────────────────────────────── #}
+<div class="chart-card" style="margin-bottom:1.25rem">
+  <div class="chart-title">Detalle por familia</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Familia</th>
+        <th class="num">Total</th>
+        <th class="num">Libres</th>
+        <th class="num">Ocupadas</th>
+        <th class="num">Reparación</th>
+        <th class="num">% Utilización</th>
+        <th style="width:120px">Ocupación</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in cat_stats %}
+      <tr>
+        <td>
+          <span style="font-family:monospace;font-size:.75rem;font-weight:700;
+                       background:var(--brand-navy);color:#fff;padding:.1rem .4rem;border-radius:3px">
+            {{ c.code }}
+          </span>
+          <span style="margin-left:.4rem">{{ c.label }}</span>
+        </td>
+        <td class="num"><strong>{{ c.total }}</strong></td>
+        <td class="num" style="color:var(--green)">{{ c.free }}</td>
+        <td class="num" style="color:var(--red)">{{ c.occupied }}</td>
+        <td class="num" style="color:var(--orange)">{{ c.repair }}</td>
+        <td class="num">{{ c.pct_occupied }}%</td>
+        <td>
+          <span class="bar-inline" style="width:{{ c.pct_occupied }}px;max-width:110px;opacity:.8"></span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# ── Top máquinas + Top clientes contratos ────────────────────────── #}
+<div class="stats-grid two-col" style="margin-bottom:1.25rem">
+
+  <div class="chart-card">
+    <div class="chart-title">Top 10 máquinas más alquiladas</div>
+    {% if top_machines %}
+    <div class="chart-wrap" style="margin-bottom:1rem">
+      <canvas id="chartTopMachines" style="max-height:260px"></canvas>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Código</th><th>Nombre</th><th>Cat.</th><th class="num">Alquileres</th></tr></thead>
+      <tbody>
+        {% for m in top_machines %}
+        <tr>
+          <td><span class="rank">{{ loop.index }}</span></td>
+          <td style="font-family:monospace;font-weight:700">{{ m.code }}</td>
+          <td style="color:var(--grey-600)">{{ m.name }}</td>
+          <td><span style="font-size:.72rem;font-family:monospace;color:var(--grey-500)">{{ m.category }}</span></td>
+          <td class="num"><strong>{{ m.rentals }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--grey-400);text-align:center;padding:2rem">Sin datos aún</p>
+    {% endif %}
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Top 10 clientes por número de contratos</div>
+    {% if top_clients_contracts %}
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Cliente</th><th class="num">Contratos</th><th class="num">Activos</th></tr></thead>
+      <tbody>
+        {% for c in top_clients_contracts %}
+        <tr>
+          <td><span class="rank">{{ loop.index }}</span></td>
+          <td>
+            <div style="font-weight:600;font-size:.83rem">{{ c.company_name }}</div>
+            <div style="font-size:.72rem;color:var(--grey-400);font-family:monospace">{{ c.client_code }}</div>
+          </td>
+          <td class="num"><strong>{{ c.contracts }}</strong></td>
+          <td class="num">
+            {% if c.active %}
+            <span class="badge badge-red" style="font-size:.68rem">{{ c.active }}</span>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--grey-400);text-align:center;padding:2rem">Sin datos aún</p>
+    {% endif %}
+  </div>
+
+</div>
+
+{# ── Top clientes facturación + Máquinas baja rotación ──────────────── #}
+<div class="stats-grid two-col" style="margin-bottom:1.25rem">
+
+  <div class="chart-card">
+    <div class="chart-title">Top 10 clientes por facturación</div>
+    {% if top_clients_revenue %}
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Cliente</th><th class="num">Ingresos</th><th class="num">Contratos</th></tr></thead>
+      <tbody>
+        {% for c in top_clients_revenue %}
+        <tr>
+          <td><span class="rank">{{ loop.index }}</span></td>
+          <td>
+            <div style="font-weight:600;font-size:.83rem">{{ c.company_name }}</div>
+            <div style="font-size:.72rem;color:var(--grey-400);font-family:monospace">{{ c.client_code }}</div>
+          </td>
+          <td class="num">
+            <strong>{{ '{:,.2f}'.format(c.revenue or 0).replace(',', '.') }} €</strong>
+          </td>
+          <td class="num">{{ c.contracts }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--grey-400);text-align:center;padding:2rem">Sin datos aún</p>
+    {% endif %}
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Máquinas con menor rotación (menos alquiladas)</div>
+    {% if low_rate_machines %}
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Código</th><th>Nombre</th><th class="num">Alquileres</th></tr></thead>
+      <tbody>
+        {% for m in low_rate_machines %}
+        <tr>
+          <td><span class="rank">{{ loop.index }}</span></td>
+          <td style="font-family:monospace;font-weight:700">{{ m.code }}</td>
+          <td style="color:var(--grey-600)">{{ m.name }}</td>
+          <td class="num">{{ m.rentals }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--grey-400);text-align:center;padding:2rem">Sin datos aún</p>
+    {% endif %}
+  </div>
+
+</div>
+
+{# ── Rendimiento por delegación ─────────────────────────────────────── #}
+<div class="chart-card" style="margin-bottom:1.25rem">
+  <div class="chart-title">Rendimiento por delegación</div>
+  {% if deleg_stats %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Delegación</th>
+        <th class="num">Total albaranes</th>
+        <th class="num">Activos</th>
+        <th class="num">Cerrados</th>
+        <th class="num">Ingresos facturados</th>
+        <th style="width:120px">Actividad</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set max_total = deleg_stats | map(attribute='total') | max %}
+      {% for d in deleg_stats %}
+      {% set pct = (d.total / max_total * 100)|round|int if max_total else 0 %}
+      <tr>
+        <td><strong>{{ d.delegacion }}</strong></td>
+        <td class="num">{{ d.total }}</td>
+        <td class="num">
+          {% if d.active %}<span class="badge badge-red" style="font-size:.68rem">{{ d.active }}</span>
+          {% else %}0{% endif %}
+        </td>
+        <td class="num">{{ d.closed or 0 }}</td>
+        <td class="num">
+          {% if d.revenue %}{{ '{:,.2f}'.format(d.revenue).replace(',', '.') }} €{% else %}—{% endif %}
+        </td>
+        <td>
+          <span class="bar-inline" style="width:{{ pct }}px;max-width:110px;background:var(--brand-navy);opacity:.75"></span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--grey-400);text-align:center;padding:2rem">
+    Ningún albarán tiene delegación asignada aún.
+  </p>
+  {% endif %}
+</div>
+
+{% endblock %}

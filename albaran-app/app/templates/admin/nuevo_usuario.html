@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo usuario{% endblock %}
+{% block page_title %}Nuevo usuario{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:460px">
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="full_name">Nombre completo</label>
+      <input type="text" id="full_name" name="full_name" class="form-control"
+             required autofocus autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label for="username">Nombre de usuario</label>
+      <input type="text" id="username" name="username" class="form-control"
+             required autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label for="password">Contraseña inicial <small>(mínimo 8 caracteres)</small></label>
+      <input type="password" id="password" name="password" class="form-control"
+             required autocomplete="new-password">
+      <small style="color:var(--grey-400)">El usuario deberá cambiarla al iniciar sesión.</small>
+    </div>
+    <div class="form-group">
+      <label for="role">Rol</label>
+      <select id="role" name="role" class="form-control">
+        <option value="worker">Trabajador</option>
+        <option value="jefe">Jefe (acceso total)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="delegacion">Delegación</label>
+      <select id="delegacion" name="delegacion" class="form-control">
+        <option value="">— Sin delegación asignada —</option>
+        {% for d in delegaciones %}
+          <option value="{{ d }}">{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem">
+      <button type="submit" class="btn btn-primary">Crear usuario</button>
+      <a href="{{ url_for('admin.usuarios') }}" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

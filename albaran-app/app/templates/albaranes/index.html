@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Albaranes{% endblock %}
+{% block page_title %}Albaranes{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('albaranes.new_step1') }}" class="btn btn-primary">+ Nuevo albarán</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body" style="padding-bottom:0">
+    <form method="get" class="filters-bar">
+      <input type="text" name="q" value="{{ search }}" placeholder="Buscar por número, obra o creador…">
+      <select name="client_id">
+        <option value="">Todos los clientes</option>
+        {% for c in clients %}
+          <option value="{{ c.id }}" {{ 'selected' if client_f == c.id|string }}>
+            {{ c.client_code }} — {{ c.company_name }}
+          </option>
+        {% endfor %}
+      </select>
+      <select name="status">
+        <option value="">Todos los estados</option>
+        <option value="active"    {{ 'selected' if status_f=='active' }}>Activo</option>
+        <option value="closed"    {{ 'selected' if status_f=='closed' }}>Cerrado</option>
+        <option value="cancelled" {{ 'selected' if status_f=='cancelled' }}>Cancelado</option>
+      </select>
+      <input type="date" name="date_from" value="{{ date_from }}" title="Desde">
+      <input type="date" name="date_to"   value="{{ date_to }}"   title="Hasta">
+      <select name="delegacion">
+        <option value="">Todas las delegaciones</option>
+        {% for d in delegaciones %}
+          <option value="{{ d }}" {{ 'selected' if delegacion_f == d }}>{{ d }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-outline">Filtrar</button>
+      {% if search or status_f or client_f or date_from or date_to or delegacion_f %}
+        <a href="{{ url_for('albaranes.index') }}" class="btn btn-outline">✕ Limpiar</a>
+      {% endif %}
+    </form>
+  </div>
+
+  {% if notes %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Albarán</th>
+          <th>Delegación</th>
+          <th>Cliente</th>
+          <th>Máquinas</th>
+          <th>Inicio</th>
+          <th>Fin</th>
+          <th>Precio</th>
+          <th>Modo</th>
+          <th>Estado</th>
+          <th>Creado por</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for n in notes %}
+        {% set status_colors = {'active':'blue','closed':'green','cancelled':'grey'} %}
+        {% set status_labels = {'active':'Activo','closed':'Cerrado','cancelled':'Cancelado'} %}
+        <tr>
+          <td class="code-cell">
+            <a href="{{ url_for('albaranes.detail', note_id=n.id) }}">{{ n.albaran_number }}</a>
+          </td>
+          <td>
+            {% if n.delegacion %}
+              <span class="badge badge-grey" style="font-size:11px">{{ n.delegacion }}</span>
+            {% else %}
+              <span style="color:var(--grey-400)">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('clients.detail', client_id=n.client.id) }}">
+              <span style="font-family:monospace;font-size:11px;color:var(--grey-400)">{{ n.client.client_code }}</span><br>
+              {{ n.client.company_name }}
+            </a>
+          </td>
+          <td>
+            {% set ms = machines_by_note.get(n.id, []) %}
+            {% for dnm in ms[:2] %}
+              <span style="font-family:monospace;font-size:11px">{{ dnm.machine.code }}</span>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+            {% if ms|length > 2 %}<span style="color:var(--grey-400)"> +{{ ms|length - 2 }}</span>{% endif %}
+            {% if not ms %}<span style="color:var(--grey-400)">—</span>{% endif %}
+          </td>
+          <td>{{ n.rental_start.strftime('%d/%m/%Y') }}</td>
+          <td>
+            {% if n.rental_end %}{{ n.rental_end.strftime('%d/%m/%Y') }}
+            {% else %}<span style="color:var(--grey-400)">Abierto</span>{% endif %}
+          </td>
+          <td style="white-space:nowrap">{{ n.display_price }}</td>
+          <td>
+            <span class="badge badge-{{ 'blue' if n.pricing_mode=='closed' else 'grey' }}">
+              {{ 'Cerrado' if n.pricing_mode=='closed' else 'Abierto' }}
+            </span>
+          </td>
+          <td>
+            <span class="badge badge-{{ status_colors.get(n.status,'grey') }}">
+              {{ status_labels.get(n.status, n.status) }}
+            </span>
+          </td>
+          <td>{{ n.created_by }}</td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <a href="{{ url_for('albaranes.detail', note_id=n.id) }}" class="btn btn-outline btn-sm">Ver</a>
+              <a href="{{ url_for('albaranes.pdf', note_id=n.id) }}" class="btn btn-outline btn-sm" title="PDF">PDF</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <h3>No se encontraron albaranes</h3>
+    <a href="{{ url_for('albaranes.new_step1') }}" class="btn btn-primary" style="margin-top:12px">Crear albarán</a>
+  </div>
+  {% endif %}
+</div>
+
+{% if pagination and pagination.pages > 1 %}
+<div style="display:flex;justify-content:center;gap:.5rem;margin-top:1rem;align-items:center">
+  {% if pagination.has_prev %}
+    <a href="{{ url_for('albaranes.index', page=pagination.prev_num, q=search, status=status_f, client_id=client_f, date_from=date_from, date_to=date_to, delegacion=delegacion_f) }}"
+       class="btn btn-outline btn-sm">← Anterior</a>
+  {% endif %}
+  <span style="color:var(--grey-500);font-size:.85rem">
+    Página {{ pagination.page }} de {{ pagination.pages }} · {{ pagination.total }} albaranes
+  </span>
+  {% if pagination.has_next %}
+    <a href="{{ url_for('albaranes.index', page=pagination.next_num, q=search, status=status_f, client_id=client_f, date_from=date_from, date_to=date_to, delegacion=delegacion_f) }}"
+       class="btn btn-outline btn-sm">Siguiente →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

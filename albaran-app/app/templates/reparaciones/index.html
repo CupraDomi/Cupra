@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Reparaciones{% endblock %}
+{% block page_title %}Partes de reparación{% endblock %}
+
+{% block content %}
+
+{# — Filtros — #}
+<div class="card" style="margin-bottom:1.25rem">
+  <div class="card-body" style="padding:.75rem 1rem">
+    <form method="get" class="filters-bar" style="margin-bottom:0">
+      <select name="status">
+        <option value="open"   {% if status_f == 'open'   %}selected{% endif %}>Abiertos</option>
+        <option value="closed" {% if status_f == 'closed' %}selected{% endif %}>Cerrados</option>
+        <option value=""       {% if status_f == ''       %}selected{% endif %}>Todos</option>
+      </select>
+      <select name="delegacion">
+        <option value="">Todas las delegaciones</option>
+        {% for d in delegaciones %}
+          <option value="{{ d }}" {% if delegacion_f == d %}selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-outline">Filtrar</button>
+      {% if delegacion_f %}
+        <a href="{{ url_for('reparaciones.index', status=status_f) }}" class="btn btn-outline">✕ Limpiar</a>
+      {% endif %}
+      <span style="margin-left:auto;font-size:.8rem;color:var(--grey-400);align-self:center">
+        {{ orders|length }} parte{{ 's' if orders|length != 1 }}
+      </span>
+    </form>
+  </div>
+</div>
+
+{% if orders %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Máquina</th>
+          <th>Delegación</th>
+          <th>Descripción</th>
+          <th>Días estimados</th>
+          <th>Coste (€)</th>
+          <th>Estado</th>
+          <th>Abierto el</th>
+          <th>Cerrado el</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td class="code-cell">
+            <a href="{{ url_for('machines.detail', machine_id=o.machine.id) }}">{{ o.machine.code }}</a>
+            <div style="font-size:.75rem;color:var(--grey-500)">{{ o.machine.name }}</div>
+          </td>
+          <td>
+            {% if o.delegacion %}
+              <span class="badge badge-grey" style="font-size:.75rem">{{ o.delegacion }}</span>
+            {% else %}
+              <span style="color:var(--grey-400)">—</span>
+            {% endif %}
+          </td>
+          <td style="max-width:220px">
+            {% if o.description %}
+              <span style="font-size:.85rem">{{ o.description[:80] }}{% if o.description|length > 80 %}…{% endif %}</span>
+            {% else %}
+              <span style="color:var(--grey-400)">—</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center">
+            {{ o.estimated_days if o.estimated_days else '—' }}
+          </td>
+          <td style="text-align:right;white-space:nowrap">
+            {% if o.cost is not none %}{{ '%.2f'|format(o.cost) }} €{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if o.status == 'open' %}
+              <span class="badge badge-orange">Abierto</span>
+            {% else %}
+              <span class="badge badge-green">Cerrado</span>
+            {% endif %}
+          </td>
+          <td style="white-space:nowrap;font-size:.82rem">{{ o.created_at.strftime('%d/%m/%Y') }}</td>
+          <td style="white-space:nowrap;font-size:.82rem">
+            {% if o.closed_at %}{{ o.closed_at.strftime('%d/%m/%Y') }}{% else %}—{% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('reparaciones.detail', order_id=o.id) }}" class="btn btn-outline btn-sm">Ver</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">🔧</div>
+  <h3>No hay partes de reparación</h3>
+  <p style="color:var(--grey-500);margin-top:.5rem">
+    Los partes se crean automáticamente cuando una máquina pasa a estado "En reparación".
+  </p>
+</div>
+{% endif %}
+
+{% endblock %}

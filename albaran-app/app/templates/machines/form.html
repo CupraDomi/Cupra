@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if machine else 'Nueva' }} máquina{% endblock %}
+{% block page_title %}{{ 'Editar máquina' if machine else 'Nueva máquina' }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('machines.index') }}" class="btn btn-outline">← Volver</a>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:720px">
+  <div class="card-header">
+    {{ 'Editar: ' + machine.code if machine else 'Registrar nueva máquina' }}
+  </div>
+  <div class="card-body">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-grid">
+
+        {% if not machine %}
+        <div class="form-group">
+          <label class="required">Código de máquina</label>
+          <input type="text" name="code" required placeholder="ej. AWP-D-001"
+                 style="font-family:monospace;font-weight:700;text-transform:uppercase"
+                 value="{{ machine.code if machine else '' }}">
+          <span class="form-hint">Formato: CATEGORIA-VARIANTE-NNN (ver README para la leyenda)</span>
+        </div>
+        {% else %}
+        <div class="form-group">
+          <label>Código</label>
+          <input type="text" value="{{ machine.code }}" disabled
+                 style="font-family:monospace;font-weight:700;background:var(--grey-100)">
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label class="required">Categoría</label>
+          <select name="category" required>
+            {% for code, label in categories %}
+              <option value="{{ code }}" {{ 'selected' if machine and machine.category==code }}>
+                {{ code }} — {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group full">
+          <label class="required">Nombre / descripción corta</label>
+          <input type="text" name="name" required placeholder="ej. Plataforma tijera diésel 12m"
+                 value="{{ machine.name if machine else '' }}">
+        </div>
+
+        <div class="form-group">
+          <label>Variante</label>
+          <input type="text" name="variant" placeholder="ej. D, E, 6T, R-3T, 045K"
+                 value="{{ machine.variant if machine else '' }}">
+          <span class="form-hint">Tipo de energía, tonelaje, potencia, etc.</span>
+        </div>
+
+        <div class="form-group">
+          <label>Estado</label>
+          <select name="status" id="status-select" onchange="toggleRepairNotes(this.value)">
+            {% for val, label in statuses %}
+              <option value="{{ val }}" {{ 'selected' if machine and machine.status==val or (not machine and val=='free') }}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group full" id="repair-notes-group"
+             style="display:{{ 'block' if machine and machine.status=='repair' else 'none' }}">
+          <label>Descripción del problema / avería</label>
+          <textarea name="repair_notes"
+                    placeholder="Describe qué le pasa a la máquina, qué piezas necesita, quién la revisa…"
+                    style="border-color:var(--orange,#f97316)">{{ machine.repair_notes if machine and machine.repair_notes else '' }}</textarea>
+        </div>
+
+        <div class="form-group full">
+          <label>Especificaciones técnicas</label>
+          <textarea name="specs" placeholder="Altura máx., capacidad, peso, año fabricación…">{{ machine.specs if machine else '' }}</textarea>
+        </div>
+
+        <div class="form-group full">
+          <label>Notas internas</label>
+          <textarea name="notes">{{ machine.notes if machine else '' }}</textarea>
+        </div>
+
+
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:8px">
+        <button type="submit" class="btn btn-primary">
+          {{ 'Guardar cambios' if machine else 'Crear máquina' }}
+        </button>
+        <a href="{{ url_for('machines.index') }}" class="btn btn-outline">Cancelar</a>
+        {% if machine %}
+        <form method="post" action="{{ url_for('machines.delete', machine_id=machine.id) }}"
+              style="margin-left:auto"
+              onsubmit="return confirm('¿Eliminar la máquina {{ machine.code }}? Esta acción no se puede deshacer.')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+        </form>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleRepairNotes(status) {
+  document.getElementById('repair-notes-group').style.display =
+    status === 'repair' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

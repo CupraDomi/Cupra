@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración inicial — Maquinaria</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); }
+    .auth-card {
+      background:#fff; border-radius:10px; box-shadow:0 4px 24px rgba(0,30,87,.10);
+      padding:2.5rem 2rem; width:100%; max-width:400px;
+    }
+    .auth-logo { text-align:center; margin-bottom:1.5rem; }
+    .auth-logo img { max-width:150px; }
+    .auth-logo small { display:block; color:var(--text-muted); margin-top:.25rem; }
+    .auth-card h2 { text-align:center; color:var(--brand-navy); margin-bottom:.5rem; font-size:1.2rem; }
+    .auth-card p.subtitle { text-align:center; color:var(--text-muted); font-size:.9rem; margin-bottom:1.5rem; }
+    .btn-block { width:100%; margin-top:1rem; }
+  </style>
+</head>
+<body>
+<div class="auth-card">
+  <div class="auth-logo">
+    <img src="{{ url_for('static', filename='img/sim_logo.png') }}" alt="SIM">
+    <small>Gestión de Albaranes</small>
+  </div>
+  <h2>Configuración inicial</h2>
+  <p class="subtitle">Crea la cuenta de administrador (jefe) para empezar.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div style="margin-bottom:1rem">
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}" style="margin-bottom:.5rem">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="full_name">Nombre completo</label>
+      <input type="text" id="full_name" name="full_name" class="form-control"
+             required autofocus autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label for="username">Nombre de usuario</label>
+      <input type="text" id="username" name="username" class="form-control"
+             required autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label for="password">Contraseña <small>(mínimo 8 caracteres)</small></label>
+      <input type="password" id="password" name="password" class="form-control"
+             required autocomplete="new-password">
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Crear cuenta y entrar</button>
+  </form>
+</div>
+</body>
+</html>

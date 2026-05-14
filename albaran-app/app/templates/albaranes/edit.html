@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Editar {{ note.albaran_number }}{% endblock %}
+{% block page_title %}Editar albarán {{ note.albaran_number }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('albaranes.detail', note_id=note.id) }}" class="btn btn-outline">← Volver</a>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:720px">
+  <div class="card-header">Editar {{ note.albaran_number }}</div>
+  <div class="card-body">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label class="required">Fecha de inicio</label>
+          <input type="date" name="rental_start" required
+                 value="{{ note.rental_start.isoformat() }}">
+        </div>
+        <div class="form-group">
+          <label>Fecha de fin</label>
+          <input type="date" name="rental_end"
+                 value="{{ note.rental_end.isoformat() if note.rental_end else '' }}">
+        </div>
+
+        <div class="form-group full">
+          <label>Obra / Ubicación</label>
+          <input type="text" name="location" value="{{ note.location or '' }}"
+                 placeholder="Nombre de la obra o dirección">
+        </div>
+
+        <!-- Pricing mode -->
+        <div class="form-group full">
+          <label>Modalidad de precio</label>
+          <div class="pricing-toggle" style="max-width:400px">
+            <input type="radio" name="pricing_mode" id="mode-open"   value="open"
+                   {{ 'checked' if note.pricing_mode=='open' }}>
+            <label for="mode-open">📅 Precio abierto</label>
+            <input type="radio" name="pricing_mode" id="mode-closed" value="closed"
+                   {{ 'checked' if note.pricing_mode=='closed' }}>
+            <label for="mode-closed">🔒 Precio cerrado</label>
+          </div>
+        </div>
+
+        <div id="open-price-fields" class="form-group full">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Tarifa</label>
+              <input type="number" name="price_rate" min="0" step="0.01"
+                     value="{{ note.price_rate or '' }}" placeholder="0.00">
+            </div>
+            <div class="form-group">
+              <label>Unidad</label>
+              <select name="price_unit">
+                <option value="day"   {{ 'selected' if note.price_unit=='day' }}>Por día</option>
+                <option value="week"  {{ 'selected' if note.price_unit=='week' }}>Por semana</option>
+                <option value="month" {{ 'selected' if note.price_unit=='month' }}>Por mes</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="closed-price-fields" class="form-group" style="display:none">
+          <label>Total acordado (€)</label>
+          <input type="number" name="total_price" min="0" step="0.01"
+                 value="{{ note.total_price or '' }}" placeholder="0.00">
+        </div>
+
+        <div class="form-group">
+          <label>Delegación</label>
+          <select name="delegacion">
+            <option value="">— Sin delegación —</option>
+            {% for d in delegaciones %}
+              <option value="{{ d }}" {{ 'selected' if note.delegacion == d }}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Creado por</label>
+          <input type="text" value="{{ note.created_by }}" disabled
+                 style="background:var(--grey-100);color:var(--grey-400)">
+        </div>
+
+        <div class="form-group full">
+          <label>Observaciones</label>
+          <textarea name="notes">{{ note.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-group full" style="color:var(--grey-400);font-size:12px">
+          Nota: para cambiar las máquinas cancela este albarán y crea uno nuevo.
+        </div>
+
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:8px">
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        <a href="{{ url_for('albaranes.detail', note_id=note.id) }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

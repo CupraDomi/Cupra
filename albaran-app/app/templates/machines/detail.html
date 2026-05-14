@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}{{ machine.code }}{% endblock %}
+{% block page_title %}{{ machine.code }} — {{ machine.name }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('machines.edit', machine_id=machine.id) }}" class="btn btn-outline">Editar</a>
+  <a href="{{ url_for('machines.index') }}" class="btn btn-outline">← Volver</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+  <!-- Info card -->
+  <div class="card">
+    <div class="card-header">
+      Información de la máquina
+      <span class="badge badge-{{ machine.status_color }} badge-dot">{{ machine.status_label }}</span>
+    </div>
+    <div class="card-body">
+      <div class="detail-grid">
+        <div class="detail-row">
+          <span class="detail-label">Código</span>
+          <span class="detail-value" style="font-family:monospace;font-weight:700;font-size:16px">{{ machine.code }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Categoría</span>
+          <span class="detail-value">{{ machine.category }}{% if machine.variant %} · {{ machine.variant }}{% endif %}</span>
+        </div>
+        <div class="detail-row" style="grid-column:1/-1">
+          <span class="detail-label">Nombre</span>
+          <span class="detail-value">{{ machine.name }}</span>
+        </div>
+        {% if machine.specs %}
+        <div class="detail-row" style="grid-column:1/-1">
+          <span class="detail-label">Especificaciones</span>
+          <span class="detail-value" style="white-space:pre-line">{{ machine.specs }}</span>
+        </div>
+        {% endif %}
+        {% if machine.repair_notes %}
+        <div class="detail-row" style="grid-column:1/-1">
+          <span class="detail-label" style="color:var(--orange)">⚠ Avería / motivo de reparación</span>
+          <span class="detail-value" style="white-space:pre-line;color:var(--orange);
+                background:var(--orange-bg);border-radius:var(--radius);padding:8px 10px;display:block">
+            {{ machine.repair_notes }}
+          </span>
+        </div>
+        {% endif %}
+        {% if machine.notes %}
+        <div class="detail-row" style="grid-column:1/-1">
+          <span class="detail-label">Notas</span>
+          <span class="detail-value" style="color:var(--grey-600)">{{ machine.notes }}</span>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+          <span class="detail-label">Delegación actual</span>
+          <span class="detail-value">
+            {% if machine.current_delegacion %}
+              <span class="badge badge-grey">📍 {{ machine.current_delegacion }}</span>
+            {% else %}
+              <span style="color:var(--grey-400)">No registrada</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Registrada el</span>
+          <span class="detail-value">{{ machine.created_at.strftime('%d/%m/%Y') }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active rentals -->
+  <div class="card">
+    <div class="card-header">Albaranes activos con esta máquina</div>
+    <div class="card-body" style="padding:0">
+      {% if active_notes %}
+        <table>
+          <thead>
+            <tr><th>Albarán</th><th>Cliente</th><th>Desde</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for n in active_notes %}
+            <tr>
+              <td class="code-cell">{{ n.albaran_number }}</td>
+              <td>{{ n.client.company_name }}</td>
+              <td>{{ n.rental_start.strftime('%d/%m/%Y') }}</td>
+              <td><a href="{{ url_for('albaranes.detail', note_id=n.id) }}" class="btn btn-outline btn-sm">Ver</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty-state" style="padding:24px">
+          <p style="color:var(--grey-400)">Sin albaranes activos actualmente.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Status history -->
+<div class="card">
+  <div class="card-header">Historial de estado (últimas 20 entradas)</div>
+  <div class="card-body" style="padding:0">
+    {% if logs %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Fecha</th><th>Estado anterior</th><th>Estado nuevo</th><th>Albarán</th><th>Por</th></tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td>{{ log.changed_at.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>
+              {% if log.old_status %}
+                <span class="badge badge-{{ {'free':'green','occupied':'red','reserved':'orange','repair':'orange'}.get(log.old_status,'grey') }}">
+                  {{ {'free':'Libre','occupied':'Ocupada','reserved':'Reservada','repair':'En reparación'}.get(log.old_status, log.old_status) }}
+                </span>
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              <span class="badge badge-{{ {'free':'green','occupied':'red','reserved':'orange','repair':'orange'}.get(log.new_status,'grey') }}">
+                {{ {'free':'Libre','occupied':'Ocupada','reserved':'Reservada','repair':'En reparación'}.get(log.new_status, log.new_status) }}
+              </span>
+            </td>
+            <td>
+              {% if log.delivery_note_id %}
+                <a href="{{ url_for('albaranes.detail', note_id=log.delivery_note_id) }}" class="code-cell">
+                  {{ log.delivery_note.albaran_number if log.delivery_note else '—' }}
+                </a>
+              {% else %}—{% endif %}
+            </td>
+            <td>{{ log.changed_by or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:24px">
+      <p style="color:var(--grey-400)">Sin historial de cambios.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

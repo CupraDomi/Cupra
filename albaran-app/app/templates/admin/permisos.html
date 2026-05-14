@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Permisos de trabajadores{% endblock %}
+{% block page_title %}Permisos de trabajadores{% endblock %}
+
+{% block content %}
+{% if not workers %}
+<div class="empty-state">
+  <p style="color:var(--grey-400)">No hay trabajadores registrados.</p>
+</div>
+{% endif %}
+
+{% for worker in workers %}
+<div class="card" style="margin-bottom:1rem">
+  <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
+    <strong style="font-size:1rem">{{ worker.username }}</strong>
+    <span style="color:var(--grey-600);font-size:.9rem">{{ worker.full_name }}</span>
+    {% if worker.delegacion %}
+      <span class="badge badge-grey" style="font-size:.75rem">{{ worker.delegacion }}</span>
+    {% endif %}
+    {% if not worker.is_active %}
+      <span class="badge badge-red" style="font-size:.75rem">Inactivo</span>
+    {% endif %}
+  </div>
+
+  {% set active_perms = worker.permissions.filter_by(revoked_at=None).all() %}
+  {% if active_perms %}
+  <div style="display:flex;flex-direction:column;gap:.35rem">
+    {% for perm in active_perms %}
+    <div style="display:flex;align-items:flex-start;gap:.6rem;flex-wrap:wrap;
+                padding:.4rem .6rem;background:var(--grey-50);border-radius:var(--radius);font-size:.85rem">
+      <span class="badge badge-orange" style="font-size:.75rem;white-space:nowrap">{{ perm.permission }}</span>
+      {% if perm.permission == 'ver_historial_parcial' %}
+        <span style="color:var(--grey-600)">
+          Targets: {% for t in perm.targets.all() %}{{ t.target_user.username if t.target_user else '?' }}{% if not loop.last %}, {% endif %}{% endfor %}
+        </span>
+      {% endif %}
+      {% if perm.permission == 'ver_albaranes_delegacion' %}
+        <span style="color:var(--grey-600)">
+          Delegaciones: {% for t in perm.targets.all() %}{{ t.target_delegacion }}{% if not loop.last %}, {% endif %}{% endfor %}
+        </span>
+      {% endif %}
+      <span style="color:var(--grey-400);margin-left:auto;white-space:nowrap">
+        Concedido por {{ perm.grantor.username }} · {{ perm.granted_at.strftime('%d/%m/%Y') }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="color:var(--grey-400);font-size:.875rem;margin:0">Sin permisos adicionales.</p>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

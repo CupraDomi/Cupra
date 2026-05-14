@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Nuevo albarán — Paso 1{% endblock %}
+{% block page_title %}Nuevo albarán{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;margin:0 auto">
+
+  <div class="steps" style="margin-bottom:24px">
+    <div class="step active"><div class="step-num">1</div> Cliente</div>
+    <div class="step-sep"></div>
+    <div class="step"><div class="step-num">2</div> Datos del albarán</div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">¿Cliente nuevo o existente?</div>
+    <div class="card-body">
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Existing client -->
+        <div style="margin-bottom:20px;padding:16px;border:1px solid var(--grey-200);border-radius:var(--radius)">
+          <label style="font-size:14px;font-weight:700;color:var(--blue-dark);display:block;margin-bottom:10px">
+            &#128100; Cliente existente
+          </label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="client-search-input"
+                   placeholder="Buscar por nombre, CIF/DNI o código…"
+                   autocomplete="off">
+            <input type="hidden" name="existing_client_id" id="existing_client_id">
+            <div class="autocomplete-results" id="client-search-results"></div>
+          </div>
+          <div style="margin-top:12px">
+            <button type="submit" name="client_choice" value="existing" class="btn btn-primary">
+              Continuar con este cliente →
+            </button>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div style="text-align:center;color:var(--grey-400);font-size:12px;font-weight:600;
+                    margin:8px 0;letter-spacing:.06em">— O —</div>
+
+        <!-- New client -->
+        <div style="padding:16px;border:1px solid var(--grey-200);border-radius:var(--radius)">
+          <label style="font-size:14px;font-weight:700;color:var(--blue-dark);display:block;margin-bottom:6px">
+            &#43; Nuevo cliente
+          </label>
+          <p style="font-size:13px;color:var(--grey-600);margin-bottom:12px">
+            Se abrirá el formulario de alta de cliente. Al guardarlo, volverás aquí automáticamente.
+          </p>
+          <button type="submit" name="client_choice" value="new" class="btn btn-outline">
+            Crear nuevo cliente →
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

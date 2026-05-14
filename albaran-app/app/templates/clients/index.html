@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Clientes{% endblock %}
+{% block page_title %}Clientes{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('clients.new') }}" class="btn btn-primary">+ Nuevo cliente</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body" style="padding-bottom:0">
+    <form method="get" class="filters-bar">
+      <input type="text" name="q" value="{{ search }}" placeholder="Buscar por nombre, CIF/DNI o código…">
+      <button type="submit" class="btn btn-outline">Buscar</button>
+      {% if search %}
+        <a href="{{ url_for('clients.index') }}" class="btn btn-outline">✕ Limpiar</a>
+      {% endif %}
+      <span style="margin-left:auto;font-size:12px;color:var(--grey-400)">
+        {{ pagination.total if pagination else clients|length }} cliente(s)
+      </span>
+    </form>
+  </div>
+
+  {% if clients %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Tipo</th>
+          <th>Nombre / Empresa</th>
+          <th>CIF / DNI / NIE</th>
+          <th>Teléfono</th>
+          <th>Albaranes activos</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in clients %}
+        <tr>
+          <td class="code-cell">{{ c.client_code }}</td>
+          <td>
+            <span class="badge badge-{{ 'blue' if c.client_type=='company' else 'grey' }}">
+              {{ 'Empresa' if c.client_type=='company' else 'Autónomo' }}
+            </span>
+          </td>
+          <td><a href="{{ url_for('clients.detail', client_id=c.id) }}">{{ c.company_name }}</a></td>
+          <td>{{ c.tax_id or '—' }}</td>
+          <td>{{ c.phone or '—' }}</td>
+          <td>
+            {% set count = active_counts.get(c.id, 0) %}
+            {% if count > 0 %}
+              <span class="badge badge-red">{{ count }} activo{{ 's' if count != 1 }}</span>
+            {% else %}
+              <span style="color:var(--grey-400)">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('clients.edit', client_id=c.id) }}" class="btn btn-outline btn-sm">Editar</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">👥</div>
+    <h3>No se encontraron clientes</h3>
+    <a href="{{ url_for('clients.new') }}" class="btn btn-primary" style="margin-top:12px">Añadir cliente</a>
+  </div>
+  {% endif %}
+</div>
+
+{% if pagination and pagination.pages > 1 %}
+<div style="display:flex;justify-content:center;gap:.5rem;margin-top:1rem;align-items:center">
+  {% if pagination.has_prev %}
+    <a href="{{ url_for('clients.index', page=pagination.prev_num, q=search) }}"
+       class="btn btn-outline btn-sm">← Anterior</a>
+  {% endif %}
+  <span style="color:var(--grey-500);font-size:.85rem">
+    Página {{ pagination.page }} de {{ pagination.pages }} · {{ pagination.total }} clientes
+  </span>
+  {% if pagination.has_next %}
+    <a href="{{ url_for('clients.index', page=pagination.next_num, q=search) }}"
+       class="btn btn-outline btn-sm">Siguiente →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

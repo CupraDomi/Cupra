@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Parte #{{ order.id }} — {{ order.machine.code }}{% endblock %}
+{% block page_title %}Parte de reparación #{{ order.id }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('machines.detail', machine_id=order.machine.id) }}" class="btn btn-outline">Ver máquina</a>
+  <a href="{{ url_for('reparaciones.index') }}" class="btn btn-outline">← Volver</a>
+{% endblock %}
+
+{% block content %}
+
+{# — Estado badge — #}
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+  {% if order.status == 'open' %}
+    <span class="badge badge-orange" style="font-size:13px;padding:5px 12px">Abierto</span>
+  {% else %}
+    <span class="badge badge-green" style="font-size:13px;padding:5px 12px">Cerrado</span>
+  {% endif %}
+  <span style="font-size:13px;color:var(--grey-600)">
+    Abierto el {{ order.created_at.strftime('%d/%m/%Y a las %H:%M') }}
+    {% if order.created_by %} por <strong>{{ order.created_by.username }}</strong>{% endif %}
+  </span>
+  {% if order.closed_at %}
+  <span style="font-size:13px;color:var(--grey-600)">
+    · Cerrado el {{ order.closed_at.strftime('%d/%m/%Y a las %H:%M') }}
+    {% if order.closed_by %} por <strong>{{ order.closed_by.username }}</strong>{% endif %}
+  </span>
+  {% endif %}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+  {# — Máquina — #}
+  <div class="card">
+    <div class="card-header">Máquina</div>
+    <div class="card-body">
+      <div class="detail-grid">
+        <div class="detail-row">
+          <span class="detail-label">Código</span>
+          <span class="detail-value" style="font-family:monospace;font-weight:700;font-size:15px">
+            <a href="{{ url_for('machines.detail', machine_id=order.machine.id) }}">{{ order.machine.code }}</a>
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Categoría</span>
+          <span class="detail-value">{{ order.machine.category }}</span>
+        </div>
+        <div class="detail-row" style="grid-column:1/-1">
+          <span class="detail-label">Nombre</span>
+          <span class="detail-value">{{ order.machine.name }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Estado actual</span>
+          <span class="detail-value">
+            <span class="badge badge-{{ order.machine.status_color }}">{{ order.machine.status_label }}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# — Datos del parte — #}
+  <div class="card">
+    <div class="card-header">
+      Datos del parte
+      {% if order.status == 'open' %}
+      <button id="toggle-edit-btn" class="btn btn-outline btn-sm"
+              style="margin-left:auto;font-size:.75rem" onclick="toggleEdit()">Editar</button>
+      {% endif %}
+    </div>
+    <div class="card-body">
+
+      {# Vista de solo lectura #}
+      <div id="view-mode" class="detail-grid">
+        <div class="detail-row">
+          <span class="detail-label">Delegación</span>
+          <span class="detail-value">
+            {% if order.delegacion %}
+              <span class="badge badge-grey">{{ order.delegacion }}</span>
+            {% else %}<span style="color:var(--grey-400)">—</span>{% endif %}
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Días estimados</span>
+          <span class="detail-value">{{ order.estimated_days if order.estimated_days else '—' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Coste estimado</span>
+          <span class="detail-value">
+            {% if order.cost is not none %}{{ '%.2f'|format(order.cost) }} €{% else %}—{% endif %}
+          </span>
+        </div>
+        <div class="detail-row" style="grid-column:1/-1">
+          <span class="detail-label">Descripción / Avería</span>
+          <span class="detail-value" style="white-space:pre-line">{{ order.description or '—' }}</span>
+        </div>
+        {% if order.resolution_notes %}
+        <div class="detail-row" style="grid-column:1/-1">
+          <span class="detail-label">Resolución</span>
+          <span class="detail-value" style="white-space:pre-line;color:var(--green)">{{ order.resolution_notes }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      {# Formulario de edición (oculto por defecto) #}
+      {% if order.status == 'open' %}
+      <form id="edit-form" method="post" action="{{ url_for('reparaciones.editar', order_id=order.id) }}"
+            style="display:none">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label>Delegación donde se repara</label>
+          <select name="delegacion" class="form-control">
+            <option value="">— Sin especificar —</option>
+            {% for d in delegaciones %}
+              <option value="{{ d }}" {{ 'selected' if order.delegacion == d }}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="form-group">
+            <label>Días estimados</label>
+            <input type="number" name="estimated_days" min="1"
+                   value="{{ order.estimated_days or '' }}" class="form-control" placeholder="—">
+          </div>
+          <div class="form-group">
+            <label>Coste estimado (€)</label>
+            <input type="number" name="cost" min="0" step="0.01"
+                   value="{{ '%.2f'|format(order.cost) if order.cost is not none else '' }}"
+                   class="form-control" placeholder="—">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descripción / Avería</label>
+          <textarea name="description" rows="3" class="form-control"
+                    placeholder="Describe el problema…">{{ order.description or '' }}</textarea>
+        </div>
+        <div style="display:flex;gap:.5rem">
+          <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="toggleEdit()">Cancelar</button>
+        </div>
+      </form>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+{# — Comentarios — #}
+<div class="card" style="margin-bottom:16px">
+  <div class="card-header">Comentarios y actualizaciones</div>
+  <div class="card-body" style="padding:0">
+
+    {% if comments %}
+    <div style="padding:.75rem 1rem;display:flex;flex-direction:column;gap:.75rem">
+      {% for c in comments %}
+      <div style="background:var(--grey-50);border-radius:var(--radius);
+                  padding:.75rem 1rem;border-left:3px solid var(--brand-orange)">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-wrap:wrap">
+          <strong style="font-size:.875rem">
+            {{ c.created_by.username if c.created_by else '—' }}
+          </strong>
+          <span style="font-size:.75rem;color:var(--grey-400)">
+            {{ c.created_at.strftime('%d/%m/%Y a las %H:%M') }}
+          </span>
+        </div>
+        <p style="font-size:.875rem;color:var(--grey-700);white-space:pre-line;margin:0">{{ c.text }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding:1.5rem;text-align:center;color:var(--grey-400);font-size:.875rem">
+      Sin comentarios todavía.
+    </div>
+    {% endif %}
+
+    {% if order.status == 'open' %}
+    <div style="padding:.75rem 1rem;border-top:1px solid var(--grey-100)">
+      <form method="post" action="{{ url_for('reparaciones.comentar', order_id=order.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group" style="margin-bottom:.5rem">
+          <textarea name="text" rows="2" class="form-control"
+                    placeholder="Añade una actualización o nota…" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-outline btn-sm">Añadir comentario</button>
+      </form>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{# — Cerrar parte — #}
+{% if order.status == 'open' %}
+<div class="card">
+  <div class="card-header" style="color:var(--green)">Cerrar parte de reparación</div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('reparaciones.cerrar', order_id=order.id) }}"
+          onsubmit="return confirm('¿Cerrar este parte? La máquina cambiará de estado.')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Estado de la máquina al cerrar</label>
+          <select name="machine_status" class="form-control">
+            <option value="free">Libre — disponible para alquilar</option>
+            <option value="reserved">Reservada</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Coste final (€) <span style="font-weight:400;color:var(--grey-400)">— opcional</span></label>
+          <input type="number" name="cost" min="0" step="0.01" class="form-control"
+                 value="{{ '%.2f'|format(order.cost) if order.cost is not none else '' }}"
+                 placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notas de resolución <span style="font-weight:400;color:var(--grey-400)">— qué se hizo para repararlo</span></label>
+        <textarea name="resolution_notes" rows="2" class="form-control"
+                  placeholder="Describe cómo se resolvió la avería…">{{ order.resolution_notes or '' }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-success">✓ Cerrar parte</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleEdit() {
+  const view = document.getElementById('view-mode');
+  const form = document.getElementById('edit-form');
+  const btn  = document.getElementById('toggle-edit-btn');
+  const editing = form.style.display !== 'none';
+  view.style.display = editing ? '' : 'none';
+  form.style.display = editing ? 'none' : 'block';
+  btn.textContent    = editing ? 'Editar' : 'Cancelar';
+}
+</script>
+{% endblock %}
