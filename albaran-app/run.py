@@ -29,14 +29,26 @@ def seed_admin_env():
 
 @app.cli.command('seed-demo')
 def seed_demo():
-    """Carga datos de demostración (máquinas, clientes, albaranes, reparaciones).
+    """Carga datos de demostración: genera ~400 máquinas + clientes + albaranes + reparaciones.
     Solo actúa si la variable de entorno SEED_DEMO=1 está definida."""
     if os.environ.get('SEED_DEMO') != '1':
         click.echo('SEED_DEMO != 1 — saltando carga de datos de demo.')
         return
-    click.echo('Cargando datos de demostración...')
+    from app.models import Machine
+    # 1. Generar ~400 máquinas (reutilizamos la lógica de seed-machines --clear)
+    click.echo('Paso 1/2 — Generando flota de máquinas...')
+    n = Machine.query.delete()
+    db.session.commit()
+    if n:
+        click.echo(f'  {n} máquinas anteriores eliminadas.')
+    from click.testing import CliRunner
+    runner = CliRunner()
+    runner.invoke(seed_machines, catch_exceptions=False)
+    # 2. Cargar clientes, albaranes y partes de reparación encima
+    click.echo('Paso 2/2 — Cargando clientes, albaranes y reparaciones...')
     import seed as seed_module
     seed_module.seed()
+    click.secho('✓ Demo lista.', fg='green')
 
 
 @app.cli.command('seed-admin')
